@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { X, Smartphone, Coins, Landmark, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { X, Smartphone, Coins, Landmark, CheckCircle2, ShieldAlert, Copy, Check, ExternalLink } from 'lucide-react';
 
 interface MpesaModalProps {
   onClose: () => void;
@@ -14,6 +14,8 @@ interface MpesaModalProps {
   depositLimit: number | null;
   totalDepositedToday: number;
   onOpenResponsibleGaming: () => void;
+  authSessionMode?: 'demo' | 'real' | null;
+  onToggleAuthMode?: () => void;
 }
 
 export default function MpesaModal({
@@ -23,45 +25,76 @@ export default function MpesaModal({
   balance,
   depositLimit,
   totalDepositedToday,
-  onOpenResponsibleGaming
+  onOpenResponsibleGaming,
+  authSessionMode = 'real',
+  onToggleAuthMode
 }: MpesaModalProps) {
   const [tab, setTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [phoneNumber, setPhoneNumber] = useState('0712345678');
   const [amount, setAmount] = useState('1000');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'stk_push' | 'success'>('form');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const handleAction = (e: React.FormEvent) => {
     e.preventDefault();
-    const num = parseFloat(amount);
-    if (isNaN(num) || num <= 0) {
-      alert("Please enter a valid currency amount in KES!");
+
+    if (authSessionMode === 'demo') {
+      alert("Demo Mode Check: You cannot deposit or withdraw real money under a Demo play account. Please log in or switch to your real player account to transact real cash!");
       return;
     }
 
-    if (tab === 'withdraw' && num > balance) {
-      alert("Insufficient KES balance for withdrawal!");
+    const num = parseFloat(amount);
+    if (isNaN(num) || num <= 0) {
+      alert("Please enter a valid currency amount in KSh!");
       return;
+    }
+
+    if (tab === 'deposit') {
+      if (num < 100) {
+        alert("Minimum deposit is 100 KSh!");
+        return;
+      }
+      if (num > 50000) {
+        alert("Maximum deposit is 50,000 KSh!");
+        return;
+      }
+    }
+
+    if (tab === 'withdraw') {
+      if (num < 100) {
+        alert("Minimum withdrawal is 100 KSh!");
+        return;
+      }
+      if (num > 500000) {
+        alert("Maximum withdrawal is 500,000 KSh!");
+        return;
+      }
+      if (num > balance) {
+        alert("Insufficient KSh balance for withdrawal!");
+        return;
+      }
     }
 
     if (tab === 'deposit' && depositLimit !== null && (totalDepositedToday + num) > depositLimit) {
-      alert(`Deposit Limit Violation: You have already deposited ${totalDepositedToday.toLocaleString()} KES today. This transaction of ${num.toLocaleString()} KES would exceed your daily self-imposed limit of ${depositLimit.toLocaleString()} KES.\n\nYou can raise or clear your limits in the Responsible Gaming panel.`);
+      alert(`Deposit Limit Violation: You have already deposited ${totalDepositedToday.toLocaleString()} KSh today. This transaction of ${num.toLocaleString()} KSh would exceed your daily self-imposed limit of ${depositLimit.toLocaleString()} KSh.\n\nYou can raise or clear your limits in the Responsible Gaming panel.`);
       return;
     }
 
     setLoading(true);
     setStep('stk_push');
 
-    // Simulate STK Push authorization delay
-    setTimeout(() => {
-      setStep('success');
-      setLoading(false);
-      if (tab === 'deposit') {
-        onDepositSuccess(num);
-      } else {
+    if (tab === 'withdraw') {
+      // Simulate direct instant dispatch delay for withdrawal payouts
+      setTimeout(() => {
+        setStep('success');
+        setLoading(false);
         onWithdrawSuccess(num);
-      }
-    }, 3200);
+      }, 3200);
+    } else {
+      // For deposit, we let them view and click the payment checkout link manually!
+      setLoading(false);
+    }
   };
 
   return (
@@ -106,6 +139,29 @@ export default function MpesaModal({
         <div className="p-5 flex-1">
           {step === 'form' && (
             <form onSubmit={handleAction} className="space-y-4">
+              {authSessionMode === 'demo' && (
+                <div className="bg-purple-950/45 p-3.5 rounded-xl border border-purple-850/60 text-center space-y-2.5 animate-pulse">
+                  <span className="text-xl">🔒</span>
+                  <div className="space-y-1">
+                    <h5 className="text-purple-300 text-[11px] font-black uppercase tracking-wider">Demo Account Active</h5>
+                    <p className="text-[10px] text-gray-400 leading-normal">
+                      Standard sandbox deposits are restricted in Demo mode. Please switch to your real account first!
+                    </p>
+                  </div>
+                  {onToggleAuthMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onToggleAuthMode();
+                      }}
+                      className="w-full py-2 px-3 bg-gradient-to-r from-purple-800 to-indigo-900 border border-purple-500/20 text-white font-extrabold uppercase text-[9px] tracking-wider rounded-lg hover:from-purple-700 hover:to-indigo-850 active:scale-95 transition-all text-center cursor-pointer"
+                    >
+                      🔑 Switch to Real Play & Login
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2.5 p-3 rounded-lg bg-[#2cb400]/5 border border-[#2cb400]/15">
                 <ShieldAlert className="w-4 h-4 text-[#2cb400] shrink-0" />
                 <span className="text-[10.5px] text-gray-400 font-medium">
@@ -133,20 +189,20 @@ export default function MpesaModal({
 
               {/* Enter Amount Input */}
               <div className="space-y-1">
-                <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Amount (KES)</label>
+                <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Amount (KSh)</label>
                 <div className="relative">
                   <Coins className="w-4.5 h-4.5 absolute left-3 top-3.5 text-gray-500" />
                   <input 
                     type="number"
-                    min="50"
-                    max="100000"
+                    min="100"
+                    max={tab === 'deposit' ? '50000' : '500000'}
                     required
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="w-full pl-10 pr-12 py-3 bg-[#0e0f11] text-white rounded-lg border border-[#2c2d34] text-sm font-mono outline-none focus:border-[#00e600] focus:ring-1 focus:ring-[#00e600] transition-all"
-                    placeholder="Min 50 KES"
+                    placeholder={tab === 'deposit' ? "100 - 50,000 KSh" : "100 - 500,000 KSh"}
                   />
-                  <span className="absolute right-3.5 top-3.5 text-xs text-gray-500 font-bold">KES</span>
+                  <span className="absolute right-3.5 top-3.5 text-xs text-gray-500 font-bold">KSh</span>
                 </div>
               </div>
 
@@ -169,7 +225,7 @@ export default function MpesaModal({
                 type="submit"
                 className={`w-full py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider cursor-pointer active:scale-95 transition-all select-none ${tab === 'deposit' ? 'bg-[#2cb400] text-white hover:bg-[#34d100]' : 'bg-red-600 text-white hover:bg-red-500'}`}
               >
-                {tab === 'deposit' ? `INITIALIZE STK DEPOSIT` : `REQUEST WITHDRAWAL`}
+                {tab === 'deposit' ? `GENERATE CHECKOUT LINK` : `REQUEST WITHDRAWAL`}
               </button>
 
               {/* Responsible Gaming Quick Link inside Wallet */}
@@ -186,27 +242,92 @@ export default function MpesaModal({
             </form>
           )}
 
-          {/* STEP 2: STK PUSH WAITING OVERLAY SCREEN */}
+          {/* STEP 2: STK PUSH WAITING OR LINK CHECKOUT OVERLAY SCREEN */}
           {step === 'stk_push' && (
-            <div className="py-8 flex flex-col items-center text-center gap-4 animate-scaleUp">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full border-4 border-t-[#00e600] border-[#1f2025] animate-spin" />
-                <Smartphone className="w-6 h-6 text-white absolute inset-5" />
-              </div>
-              
-              <div className="space-y-1.5">
-                <h5 className="text-[#00e600] font-black text-sm uppercase tracking-widest animate-pulse">
-                  Authorization Sent!
-                </h5>
-                <p className="text-xs text-gray-300 max-w-[240px] mx-auto font-medium">
-                  We've sent an M-Pesa STK push to <strong className="font-mono text-white">{phoneNumber}</strong>. 
-                  Please unlock your phone screen and type your PIN.
-                </p>
-                <div className="pt-2 text-[10px] font-mono text-gray-500">
-                  Transaction ref: <strong className="text-gray-400">MPESA-STK-{Date.now().toString().slice(-6)}</strong>
+            tab === 'deposit' ? (
+              <div className="py-4 flex flex-col items-center text-center gap-4 animate-scaleUp">
+                <div className="w-12 h-12 bg-purple-950/40 border border-purple-500/20 text-[#00e600] rounded-full flex items-center justify-center text-xl shadow-lg">
+                  🔗
+                </div>
+                
+                <div className="space-y-1 w-full text-left">
+                  <h5 className="text-[#00e600] text-center font-black text-sm uppercase tracking-wider">
+                    Checkout Link Active!
+                  </h5>
+                  <p className="text-[11px] text-center text-gray-400 max-w-[260px] mx-auto leading-normal">
+                    Secure M-Pesa transaction link has been dynamically provisioned for KSh <strong className="text-white font-mono">{parseFloat(amount).toLocaleString()}</strong>.
+                  </p>
+                </div>
+
+                <div className="w-full bg-[#0d0e10] p-3.5 rounded-lg border border-[#212327] flex flex-col gap-2">
+                  <div className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider block font-mono">Secure Payment URL</div>
+                  <div className="bg-[#141518] text-[9.5px] font-mono text-purple-300 p-2 rounded border border-[#24262c] text-left select-all truncate">
+                    https://pay.casinohub.link/mpesa?amt={amount}&tel={phoneNumber}&ref=TX-{Date.now().toString().slice(-4)}
+                  </div>
+                  
+                  <div className="flex gap-2 pt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => alert(`Simulated link opened for KSh ${amount}. Please pay on the checkout interface.`)}
+                      className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-[10px] uppercase tracking-wider rounded flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open Link</span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const payUrl = `https://pay.casinohub.link/mpesa?amt=${amount}&tel=${phoneNumber}`;
+                        navigator.clipboard.writeText(payUrl);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      }}
+                      className="px-3 bg-zinc-800 hover:bg-zinc-700 rounded text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+                      title="Copy link to clipboard"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-[#00e600]" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full pt-2 border-t border-[#212327]">
+                  <p className="text-[9.5px] text-gray-500 text-center leading-normal mb-3">
+                    Once payment has been simulated on the generated webpage, verify below to instantly credit your fund.
+                  </p>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('success');
+                      onDepositSuccess(parseFloat(amount));
+                    }}
+                    className="w-full py-3.5 bg-[#00e600] hover:bg-[#1bf31b] text-black text-xs font-black uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer transition-transform active:scale-95 text-center"
+                  >
+                    ✅ Verify & Claim Deposit
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="py-8 flex flex-col items-center text-center gap-4 animate-scaleUp">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full border-4 border-t-red-500 border-[#1f2025] animate-spin" />
+                  <Smartphone className="w-6 h-6 text-white absolute inset-5" />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <h5 className="text-red-500 font-black text-sm uppercase tracking-widest animate-pulse">
+                    Dispatching Payout!
+                  </h5>
+                  <p className="text-xs text-gray-300 max-w-[240px] mx-auto font-medium">
+                    We are releasing M-Pesa Cashier funds of <strong className="font-mono text-white">KSh {parseFloat(amount).toLocaleString()}</strong> to your registered mobile number...
+                  </p>
+                  <div className="pt-2 text-[10px] font-mono text-gray-500">
+                    Safaricom Operator Dispatch queued.
+                  </div>
+                </div>
+              </div>
+            )
           )}
 
           {/* STEP 3: TRANSACTION CLEARED SUCCESS OVERLAY SCREEN */}
@@ -222,8 +343,8 @@ export default function MpesaModal({
                 </h4>
                 <p className="text-xs text-gray-400">
                   {tab === 'deposit' 
-                    ? `Your payment of ${parseFloat(amount).toLocaleString()} KES has been received and credited.` 
-                    : `Your withdrawal of ${parseFloat(amount).toLocaleString()} KES is dispatching instantly.`}
+                    ? `Your payment of ${parseFloat(amount).toLocaleString()} KSh has been received and credited.` 
+                    : `Your withdrawal of ${parseFloat(amount).toLocaleString()} KSh is dispatching instantly.`}
                 </p>
                 <div className="mt-3 inline-block bg-[#0f210e]/60 px-3 py-1.5 rounded-lg border border-[#1a3818] font-mono text-xs text-[#00e600] font-bold">
                   Wallet updated!

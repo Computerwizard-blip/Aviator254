@@ -67,7 +67,7 @@ export default function WalletAndTill({
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Triggering the custom Till-Payment flow
+  // Triggering the custom Till-Payment flow via payment checkout links
   const initiateTillDeposit = () => {
     const num = parseFloat(amountInput);
     if (isNaN(num) || num <= 0) {
@@ -75,30 +75,29 @@ export default function WalletAndTill({
       return;
     }
     if (phoneInput.trim() === '') {
-      triggerNotification('Phone Required', 'Kindly input your currency/mobile phone number target.', 'general');
+      triggerNotification('Phone Required', 'Kindly input your mobile phone number.', 'general');
       return;
     }
 
     setTillStep('processing');
     
-    // Simulate push notification trigger from buy goods till
+    // Simulate generation of payment checkout gateway link
     setTimeout(() => {
       setTillStep('awaiting_pin');
-      triggerNotification('Simulated Till Push Sent', `STK Push prompt sent to target mobile: ${phoneInput}!`, 'deposit');
-    }, 1500);
+      triggerNotification(
+        '🔗 Payment Link Ready', 
+        `Checkout link for KSh ${num.toLocaleString()} created successfully!`, 
+        'deposit'
+      );
+    }, 1200);
   };
 
   const verifyPINAndCredit = () => {
-    if (simulatedPIN.length < 4) {
-      triggerNotification('Invalid PIN', 'Please type a valid 4-digit mobile wallet authorization PIN.', 'general');
-      return;
-    }
-
     const depAmount = parseFloat(amountInput);
     setTillStep('verified');
 
     // Add cash to main balance and bonus matching
-    const bonusAdd = depAmount * 0.20; // 20% cashback bonus matched on till deposits
+    const bonusAdd = depAmount * 0.20; // 20% cashback bonus matched on till deposit links
     setWallet((prev) => ({
       ...prev,
       mainBalance: prev.mainBalance + depAmount,
@@ -108,18 +107,18 @@ export default function WalletAndTill({
     addTransaction({
       type: 'deposit',
       amount: depAmount,
-      currency: 'USD',
-      method: `M-Pesa Till ${TILL_NUMBER}`,
+      currency: 'KSh',
+      method: 'M-Pesa Payment Link',
       referenceCode: `MP-${Math.random().toString(36).substring(3, 9).toUpperCase()}`
     });
 
-    triggerNotification('Deposit Successful!', `Credited +$${depAmount.toFixed(2)} to Main Wallet & +$${bonusAdd.toFixed(2)} matched welcome bonus!`, 'deposit');
+    triggerNotification('Deposit Successful!', `Credited +KSh ${depAmount.toLocaleString()} to Main Wallet & +KSh ${bonusAdd.toLocaleString()} bonus from payment link!`, 'deposit');
   };
 
   const handleCardDeposit = () => {
     const depAmount = parseFloat(amountInput);
     if (isNaN(depAmount) || depAmount <= 0) {
-      triggerNotification('Invalid Amount', 'Please specify a valid dollar value.', 'general');
+      triggerNotification('Invalid Amount', 'Please specify a valid KSh value.', 'general');
       return;
     }
     
@@ -131,11 +130,11 @@ export default function WalletAndTill({
     addTransaction({
       type: 'deposit',
       amount: depAmount,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Visa/Mastercard Gateway'
     });
 
-    triggerNotification('Card Deposited', `Securely added $${depAmount.toFixed(2)} to your wallet.`, 'deposit');
+    triggerNotification('Card Deposited', `Securely added KSh ${depAmount.toLocaleString()} to your wallet.`, 'deposit');
     setAmountInput('100');
   };
 
@@ -151,11 +150,11 @@ export default function WalletAndTill({
     addTransaction({
       type: 'deposit',
       amount: depAmount,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'USDT/Crypto Address'
     });
 
-    triggerNotification('Crypto Received', `USDT blockchain transaction decoded. Credited $${depAmount.toFixed(2)}!`, 'deposit');
+    triggerNotification('Crypto Received', `Crypto transaction decoded. Credited KSh ${depAmount.toLocaleString()}!`, 'deposit');
   };
 
   const handleWithdrawalRequest = () => {
@@ -178,11 +177,11 @@ export default function WalletAndTill({
     addTransaction({
       type: 'withdrawal',
       amount: amt,
-      currency: 'USD',
+      currency: 'KSh',
       method: withdrawMethod === 'mpesa' ? 'M-Pesa Payout' : withdrawMethod === 'airtel' ? 'Airtel Money Transfer' : 'Direct Bank Out'
     });
 
-    triggerNotification('Withdrawal Queued', `Sent withdrawal of $${amt.toFixed(2)} to target ${withdrawTarget}. Processing instantly via automation!`, 'withdrawal');
+    triggerNotification('Withdrawal Queued', `Sent withdrawal of KSh ${amt.toLocaleString()} to target ${withdrawTarget}. Processing instantly via automation!`, 'withdrawal');
     setWithdrawAmount('100');
   };
 
@@ -277,7 +276,7 @@ export default function WalletAndTill({
                   </div>
 
                   <p className="text-xs text-purple-304/60 mb-6 leading-relaxed">
-                    Deposit safely via M-Pesa Till. Specify the value in USD below. Our gateway translates the exchange rate and launches a secure push verification window!
+                    Deposit safely via M-Pesa Till. Specify the value in KSh below. Our gateway translates the exchange rate and launches a secure push verification window!
                   </p>
 
                   {tillStep === 'input' && (
@@ -286,7 +285,7 @@ export default function WalletAndTill({
                       {/* Flex row with amount and mobile */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[10px] text-purple-400 font-bold block mb-1">DEPOSIT AMOUNT ($)</label>
+                          <label className="text-[10px] text-purple-400 font-bold block mb-1">DEPOSIT AMOUNT (KSh)</label>
                           <input 
                             type="number"
                             value={amountInput}
@@ -342,30 +341,55 @@ export default function WalletAndTill({
                   )}
 
                   {tillStep === 'awaiting_pin' && (
-                    <div className="max-w-xs mx-auto border border-purple-500/20 bg-[#160d2b] p-6 rounded-2xl relative shadow-xl">
-                      <div className="absolute top-2 right-2 bg-red-600 px-2 py-0.5 rounded text-[8px] font-black font-mono">STK PUSH SIMULATED</div>
+                    <div className="max-w-md mx-auto border border-purple-500/20 bg-[#160d2b] p-6 rounded-2xl relative shadow-xl space-y-4">
+                      <div className="absolute top-2 right-2 bg-amber-500 text-black px-2 py-0.5 rounded text-[8px] font-black font-mono">LINK CHECKOUT ACTIVE</div>
                       
-                      <div className="text-center mb-4">
-                        <span className="text-2xl">📱</span>
-                        <h4 className="text-xs font-black text-white uppercase italic mt-1">Simulator: Enter Wallet PIN</h4>
-                        <p className="text-[9px] text-purple-300">Authorize transfer of ${amountInput} to Buy Goods Till {TILL_NUMBER}</p>
+                      <div className="text-center">
+                        <span className="text-2xl">🔗</span>
+                        <h4 className="text-xs font-black text-white uppercase italic mt-1">Complete Deposit via M-Pesa Web Link</h4>
+                        <p className="text-[10px] text-purple-300">Click the secure URL link below to make payment of KSh {parseFloat(amountInput).toLocaleString()}</p>
                       </div>
 
-                      <div className="space-y-4">
-                        <input 
-                          type="password"
-                          maxLength={4}
-                          value={simulatedPIN}
-                          onChange={(e) => setSimulatedPIN(e.target.value)}
-                          className="w-full text-center bg-[#07030e] border-2 border-purple-900 rounded-lg p-2 text-lg font-black text-amber-400 tracking-widest focus:outline-none"
-                          placeholder="••••"
-                        />
+                      <div className="bg-[#0f071f] p-3 rounded-lg border border-purple-500/10 flex flex-col gap-2">
+                        <div className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-widest block font-mono">Generated Payment Link</div>
+                        <div className="bg-black/40 text-[9.5px] font-mono text-purple-300 p-2.5 rounded border border-purple-900/40 select-all truncate">
+                          https://pay.casinohub.link/checkout/mpesa?amt={amountInput}&tel={phoneInput}&order=CH-{Date.now().toString().slice(-6)}
+                        </div>
+                        
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            onClick={() => {
+                              triggerNotification('Checkout Webpage Opened', 'Simulated Secure M-Pesa Checkout link active!', 'general');
+                            }}
+                            className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-[10px] uppercase tracking-wider rounded text-center transition-all cursor-pointer shadow-md select-none"
+                          >
+                            🌐 Open Checkout Link
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              const payUrl = `https://pay.casinohub.link/checkout/mpesa?amt=${amountInput}&tel=${phoneInput}`;
+                              navigator.clipboard.writeText(payUrl);
+                              triggerNotification('Link Copied', 'M-Pesa payment link copied to clipboard!', 'general');
+                            }}
+                            className="px-3.5 bg-black/40 hover:bg-black/60 rounded border border-purple-900/30 text-purple-300 cursor-pointer transition-colors"
+                            title="Copy payment checkout link"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-[9.5px] text-gray-400 text-left leading-normal italic">
+                          💡 Sandbox Note: After payment has been completed on the link layout, click the green "I HAVE PAID" verification button below to credit your casino balance.
+                        </p>
 
                         <button 
                           onClick={verifyPINAndCredit}
-                          className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded"
+                          className="w-full py-3 bg-[#00e600] hover:bg-[#1bf31b] text-black font-black text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer"
                         >
-                          SUBMIT PIN CODE
+                          ✅ I Have Paid & Verified Link
                         </button>
                       </div>
                     </div>
@@ -399,7 +423,7 @@ export default function WalletAndTill({
 
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[10px] text-purple-400 font-bold block mb-0.5">CARD AMOUNT TO LOAD ($)</label>
+                      <label className="text-[10px] text-purple-400 font-bold block mb-0.5">CARD AMOUNT TO LOAD (KSh)</label>
                       <input 
                         type="number"
                         value={amountInput}
@@ -457,7 +481,7 @@ export default function WalletAndTill({
 
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[10px] text-purple-400 font-bold block mb-0.5">AMOUNT IN DOLLARS ($)</label>
+                      <label className="text-[10px] text-purple-400 font-bold block mb-0.5">AMOUNT IN KSh (KSh)</label>
                       <input 
                         type="number"
                         value={amountInput}
@@ -542,7 +566,7 @@ export default function WalletAndTill({
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] text-purple-400 font-bold block mb-0.5">WITHDRAW AMOUNT ($)</label>
+                  <label className="text-[10px] text-purple-400 font-bold block mb-0.5">WITHDRAW AMOUNT (KSh)</label>
                   <input 
                     type="number"
                     value={withdrawAmount}
@@ -564,7 +588,7 @@ export default function WalletAndTill({
 
                 <div className="bg-[#120722] p-3 rounded border border-purple-500/15 flex items-center justify-between text-xs font-mono">
                   <span className="text-purple-300">Main Account Balance:</span>
-                  <span className="text-amber-400 font-bold">${wallet.mainBalance.toFixed(2)}</span>
+                  <span className="text-amber-400 font-bold">KSh {wallet.mainBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
 
                 <button 
@@ -611,7 +635,7 @@ export default function WalletAndTill({
                       <td className="py-3 max-w-[140px] truncate">{tx.game || tx.method || 'General Cashier'}</td>
                       <td className="py-3">
                         <span className={tx.type === 'win' || tx.type === 'deposit' ? 'text-emerald-400 font-bold' : 'text-purple-300 font-semibold'}>
-                          {tx.type === 'win' || tx.type === 'deposit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                          {tx.type === 'win' || tx.type === 'deposit' ? '+' : '-'}KSh {tx.amount.toLocaleString()}
                         </span>
                       </td>
                       <td className="py-3">

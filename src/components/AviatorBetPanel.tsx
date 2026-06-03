@@ -18,6 +18,7 @@ interface AviatorBetPanelProps {
   setHasCashedOut: (v: boolean) => void;
   onBetPlaced: (amount: number) => void;
   onCashOut: (multiplier: number, amount: number) => void;
+  onBetCancelled?: (amount: number) => void;
 }
 
 export default function AviatorBetPanel({
@@ -32,6 +33,7 @@ export default function AviatorBetPanel({
   setHasCashedOut,
   onBetPlaced,
   onCashOut,
+  onBetCancelled,
 }: AviatorBetPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<'bet' | 'auto'>('bet');
   const [betAmount, setBetAmount] = useState<number>(10.00);
@@ -39,6 +41,7 @@ export default function AviatorBetPanel({
   const [autoCashoutEnabled, setAutoCashoutEnabled] = useState<boolean>(false);
   const [autoCashoutValue, setAutoCashoutValue] = useState<number>(2.00);
   const [autoBetEnabled, setAutoBetEnabled] = useState<boolean>(false);
+  const [isWaitingNextRound, setIsWaitingNextRound] = useState<boolean>(false);
 
   // Quick stake buttons from photographs
   const quickStakes = [100, 200, 500, 10000];
@@ -63,18 +66,29 @@ export default function AviatorBetPanel({
   // Perform Bet placements
   const handlePlaceBet = () => {
     if (isPlaced) {
-      // Cancel outstanding preflight bet
-      if (countdownActive) {
+      // Cancel outstanding preflight bet or queued next-round bet
+      if (countdownActive || isWaitingNextRound) {
         setIsPlaced(false);
         setHasCashedOut(false);
+        if (onBetCancelled) {
+          onBetCancelled(placedBetAmount);
+        }
         setPlacedBetAmount(0);
+        setIsWaitingNextRound(false);
       }
       return;
     }
 
     if (balance < betAmount) {
-      alert("Insufficient KES Balance. Clean simple reload available!");
+      alert("Insufficient KSh Balance. Clean simple reload available!");
       return;
+    }
+
+    // Capture whether the flight is currently soaring or not
+    if (crashActive) {
+      setIsWaitingNextRound(true);
+    } else {
+      setIsWaitingNextRound(false);
     }
 
     setIsPlaced(true);
@@ -85,7 +99,7 @@ export default function AviatorBetPanel({
 
   // Trigger cashout payout
   const handleCashOutClick = () => {
-    if (!isPlaced || hasCashedOut || !crashActive) return;
+    if (!isPlaced || hasCashedOut || !crashActive || isWaitingNextRound) return;
     setHasCashedOut(true);
     const payout = parseFloat((placedBetAmount * crashMultiplier).toFixed(2));
     onCashOut(crashMultiplier, payout);
@@ -93,14 +107,14 @@ export default function AviatorBetPanel({
 
   // Auto-cashout trigger scan loop in-flight
   useEffect(() => {
-    if (crashActive && isPlaced && !hasCashedOut && autoCashoutEnabled) {
+    if (crashActive && isPlaced && !isWaitingNextRound && !hasCashedOut && autoCashoutEnabled) {
       if (crashMultiplier >= autoCashoutValue) {
         setHasCashedOut(true);
         const payout = parseFloat((placedBetAmount * autoCashoutValue).toFixed(2));
         onCashOut(autoCashoutValue, payout);
       }
     }
-  }, [crashActive, crashMultiplier, isPlaced, hasCashedOut, autoCashoutEnabled, autoCashoutValue, placedBetAmount]);
+  }, [crashActive, crashMultiplier, isPlaced, isWaitingNextRound, hasCashedOut, autoCashoutEnabled, autoCashoutValue, placedBetAmount]);
 
   // Handle auto-bet setup on countdown start
   useEffect(() => {
@@ -117,13 +131,19 @@ export default function AviatorBetPanel({
   // Reset states when round ends
   useEffect(() => {
     if (!crashActive && !countdownActive) {
-      if (!autoBetEnabled) {
-        setIsPlaced(false);
-        setPlacedBetAmount(0);
+      if (isWaitingNextRound) {
+        // Enters the active zone for the loaded next round countdown
+        setIsWaitingNextRound(false);
+        setHasCashedOut(false);
+      } else {
+        if (!autoBetEnabled) {
+          setIsPlaced(false);
+          setPlacedBetAmount(0);
+        }
+        setHasCashedOut(false);
       }
-      setHasCashedOut(false);
     }
-  }, [crashActive, countdownActive]);
+  }, [crashActive, countdownActive, isWaitingNextRound, autoBetEnabled]);
 
   return (
     <div className="bg-[#141518] p-3 rounded-2xl border border-[#212327] flex flex-col gap-2.5 overflow-hidden select-none">
@@ -199,6 +219,77 @@ export default function AviatorBetPanel({
         </div>
       )}
 
+      {/* Auto Cashout Quick Control Row */}
+      <div className="bg-[#0e0f11] p-2.5 rounded-xl border border-[#212327] flex flex-wrap items-center justify-between gap-2 text-xs font-sans">
+        <div className="flex items-center gap-2">
+          {/* Custom Slide Checkbox for instant toggle */}
+          <label className="relative inline-flex items-center cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              checked={autoCashoutEnabled}
+              onChange={(e) => setAutoCashoutEnabled(e.target.checked)}
+              className="sr-only peer"
+            />
+            {/* Smooth toggle slider container */}
+            <div className="w-9 h-5 bg-[#23252b] rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-gray-400 peer-checked:after:bg-[#00e600] after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#0c1f0b] border border-transparent peer-focus:border-purple-500/20" />
+          </label>
+          <div className="flex flex-col">
+            <span className="text-[#eaeaea] font-black uppercase tracking-wider text-[10.5px]">Auto Cashout</span>
+            <span className="text-[9px] text-[#8e9099] leading-none">Auto payout on target hit</span>
+          </div>
+        </div>
+
+        {/* Dynamic target input value with quick-adjust multipliers */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-black/50 border border-[#252830] rounded-lg px-2 py-1 focus-within:border-amber-400 transition-colors">
+            <input 
+              type="number"
+              step="0.05"
+              min="1.01"
+              disabled={!autoCashoutEnabled}
+              value={autoCashoutValue}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setAutoCashoutValue(isNaN(val) ? 1.01 : Math.max(1.01, val));
+              }}
+              className="w-14 bg-transparent outline-none font-mono text-right text-amber-400 font-bold text-xs disabled:opacity-40 disabled:text-gray-600 transition-all"
+            />
+            <span className="text-gray-500 text-[10px] ml-1 font-black font-mono">x</span>
+          </div>
+
+          {/* Preset increment adjustments */}
+          <div className="flex gap-1">
+            <button
+              type="button"
+              disabled={!autoCashoutEnabled}
+              onClick={() => setAutoCashoutValue(prev => parseFloat(Math.max(1.01, prev - 0.5).toFixed(2)))}
+              className="px-2 py-1 bg-[#1f2025] hover:bg-[#282a32] text-[9.5px] font-mono font-black text-gray-400 hover:text-white rounded transition-colors disabled:opacity-20 cursor-pointer"
+              title="Decrease multiplier by 0.5"
+            >
+              -0.5
+            </button>
+            <button
+              type="button"
+              disabled={!autoCashoutEnabled}
+              onClick={() => setAutoCashoutValue(prev => parseFloat((prev + 0.5).toFixed(2)))}
+              className="px-2 py-1 bg-[#1f2025] hover:bg-[#282a32] text-[9.5px] font-mono font-black text-gray-400 hover:text-white rounded transition-colors disabled:opacity-20 cursor-pointer"
+              title="Increase multiplier by 0.5"
+            >
+              +0.5
+            </button>
+            <button
+              type="button"
+              disabled={!autoCashoutEnabled}
+              onClick={() => setAutoCashoutValue(2.00)}
+              className={`px-2 py-1 text-[9.5px] font-mono font-black rounded transition-colors cursor-pointer ${autoCashoutValue === 2.0 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-[#1f2025] hover:bg-[#282a32] text-gray-400 hover:text-white'}`}
+              title="Set to 2.0x"
+            >
+              2.0x
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 3. Betting Operation core section */}
       <div className="grid grid-cols-12 gap-3 items-center">
         {/* Left column: Minus/Plus Counter & Quick buttons */}
@@ -265,13 +356,13 @@ export default function AviatorBetPanel({
             >
               <span className="text-white text-md tracking-widest font-black uppercase leading-tight select-none">Bet</span>
               <span className="text-white text-xs font-mono font-bold tracking-tight select-none">
-                {betAmount.toFixed(2)} KES
+                {betAmount.toFixed(2)} KSh
               </span>
             </button>
           ) : (
             /* Active Bet displays cancel or CASH OUT triggers dynamically */
-            countdownActive ? (
-              /* Placed wager inside lobby countdown - user can CANCEL and get refund */
+            (countdownActive || isWaitingNextRound) ? (
+              /* Placed wager inside lobby countdown or waiting for next round - user can CANCEL and get refund */
               <button 
                 type="button"
                 onClick={handlePlaceBet}
@@ -279,7 +370,7 @@ export default function AviatorBetPanel({
               >
                 <span className="text-white text-sm font-black tracking-widest uppercase leading-tight">CANCEL</span>
                 <span className="text-white text-[10px] uppercase font-mono font-bold opacity-80">
-                  Lobby Refund
+                  {isWaitingNextRound ? 'Wait Next Round' : 'Lobby Refund'}
                 </span>
               </button>
             ) : (
@@ -292,7 +383,7 @@ export default function AviatorBetPanel({
                 >
                   <span className="text-black text-sm tracking-widest font-black uppercase leading-none select-none">CASH OUT</span>
                   <span className="text-black font-mono font-bold text-[13px] tracking-tight mt-0.5 select-none text-shadow-sm">
-                    {(placedBetAmount * crashMultiplier).toFixed(2)} KES
+                    {(placedBetAmount * crashMultiplier).toFixed(2)} KSh
                   </span>
                 </button>
               ) : (

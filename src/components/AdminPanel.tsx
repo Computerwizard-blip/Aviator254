@@ -21,6 +21,21 @@ import {
 } from 'lucide-react';
 import { UserProfile, Wallet, JackpotPool, Transaction } from '../types';
 
+export const PROMO_GAMES_OPTIONS = [
+  { id: 'slot-classic', title: 'Fruit Mania 777 (Slots) 🍒' },
+  { id: 'slot-video', title: 'Gates of Valhalla (Slots) 🎰' },
+  { id: 'slot-jackpot', title: 'Mega Moolah Gold (Slots) 👑' },
+  { id: 'slot-megaways', title: 'Sweet Bonanza Extra (Slots) 🍭' },
+  { id: 'live-roulette', title: 'Lightning Roulette Live (Live Dealer) 🎡' },
+  { id: 'live-blackjack', title: 'VIP Blackjack Table (Live Dealer) 🃏' },
+  { id: 'table-euro-roulette', title: 'European Roulette Pro (Table Games) 🎡' },
+  { id: 'table-classic-blackjack', title: 'Classic Blackjack Multi-hand (Table Games) 🃏' },
+  { id: 'instant-aviator', title: 'Aviator Crash (Instant Win) 🚀' },
+  { id: 'instant-mines', title: 'Mines Gold Mines (Instant Win) 💣' },
+  { id: 'instant-plinko', title: 'Plinko Multi-drops (Instant Win) 🎯' },
+  { id: 'instant-coinflip', title: 'Turbo Coin Flip (Instant Win) 🪙' },
+];
+
 interface AdminPanelProps {
   userProfile: UserProfile;
   setUserProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
@@ -31,6 +46,14 @@ interface AdminPanelProps {
   transactions: Transaction[];
   addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp' | 'status'> & { status?: 'SUCCESS' | 'FAILED' | 'PENDING' }) => void;
   triggerNotification: (title: string, message: string, type: 'deposit' | 'withdrawal' | 'bonus' | 'jackpot' | 'tournament' | 'vip' | 'general') => void;
+  gameOfTheWeek: {
+    gameId: string;
+    promoType: string;
+    promoValue: string;
+    description: string;
+    bannerTitle: string;
+  };
+  setGameOfTheWeek: (config: any) => void;
 }
 
 export default function AdminPanel({
@@ -42,9 +65,42 @@ export default function AdminPanel({
   setJackpotPool,
   transactions,
   addTransaction,
-  triggerNotification
+  triggerNotification,
+  gameOfTheWeek,
+  setGameOfTheWeek
 }: AdminPanelProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'jackpots' | 'finances' | 'providers'>('finances');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'jackpots' | 'finances' | 'promos'>('finances');
+
+  const [selectedGameId, setSelectedGameId] = useState<string>(gameOfTheWeek?.gameId || 'slot-classic');
+  const [promoType, setPromoType] = useState<string>(gameOfTheWeek?.promoType || 'cashback_boost');
+  const [promoValue, setPromoValue] = useState<string>(gameOfTheWeek?.promoValue || '+10% Cashback');
+  const [description, setDescription] = useState<string>(gameOfTheWeek?.description || 'Spin Fruit Mania 777 this week and unlock massive 10% boosted cashback on all lost stakes!');
+  const [bannerTitle, setBannerTitle] = useState<string>(gameOfTheWeek?.bannerTitle || 'Fruit Mania 777 Cashback Turbo Boost!');
+
+  const handleSavePromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedPromo = {
+      gameId: selectedGameId,
+      promoType,
+      promoValue,
+      description,
+      bannerTitle
+    };
+    setGameOfTheWeek(updatedPromo);
+    localStorage.setItem('casino_game_of_the_week', JSON.stringify(updatedPromo));
+
+    const gameName = PROMO_GAMES_OPTIONS.find(g => g.id === selectedGameId)?.title.split(' (')[0] || 'Featured Game';
+    triggerNotification(
+      '🏆 GOTW ACTIVATED!', 
+      `The Game of the Week is now ${gameName}! Play now to get premium benefits: ${promoValue}.`, 
+      'bonus'
+    );
+    triggerNotification(
+      '🔥 CASHBACK BOOST!', 
+      `Get active rewards on ${gameName} today! Play and earn loyalty points!`, 
+      'vip'
+    );
+  };
   
   // Custom players list mock data state
   const [players, setPlayers] = useState<any[]>([
@@ -87,7 +143,7 @@ export default function AdminPanel({
     addTransaction({
       type: type === 'add' ? 'deposit' : 'withdrawal',
       amount: amt,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Admin Manual Overwrite',
       referenceCode: `AD-${Math.random().toString(36).substring(3,9).toUpperCase()}`
     });
@@ -135,6 +191,7 @@ export default function AdminPanel({
           {[
             { id: 'finances', label: 'Financial Analytics', icon: <TrendingUp className="w-3.5 h-3.5" /> },
             { id: 'users', label: 'User Overrides', icon: <Users className="w-3.5 h-3.5" /> },
+            { id: 'promos', label: 'GOTW Planner', icon: <Award className="w-3.5 h-3.5 text-amber-500" /> },
             { id: 'jackpots', label: 'Jackpot Knobs', icon: <Sliders className="w-3.5 h-3.5" /> }
           ].map((subTab) => (
             <button 
@@ -304,6 +361,148 @@ export default function AdminPanel({
             </div>
 
           </div>
+        )}
+
+        {/* SUBTAB: GAME OF THE WEEK PLANNER */}
+        {activeSubTab === 'promos' && (
+          <form onSubmit={handleSavePromo} className="space-y-6">
+            <div className="flex items-center justify-between border-b border-purple-900/30 pb-3">
+              <div>
+                <h4 className="text-sm font-black text-[#fbbf24] uppercase tracking-wider">Game of the Week Promotion Hub</h4>
+                <p className="text-[10px] text-purple-300 font-sans">
+                  Deploy live campaigns, set enhanced bonus structures, and push real-time broadcasts to the Casino lobby.
+                </p>
+              </div>
+              <span className="text-xs bg-[#fbbf24]/10 text-amber-400 py-1 px-3 rounded-full border border-amber-400/20 font-bold uppercase">
+                Active GOTW: {PROMO_GAMES_OPTIONS.find(g => g.id === gameOfTheWeek?.gameId)?.title.split(' (')[0] || 'Default'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Left Column: configuration knobs */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] text-purple-300 uppercase font-black block mb-1.5">
+                    1. Select Featured Game
+                  </label>
+                  <select
+                    value={selectedGameId}
+                    onChange={(e) => setSelectedGameId(e.target.value)}
+                    className="w-full bg-[#0a0510] border border-purple-900 text-purple-200 rounded p-2 text-xs focus:ring-1 focus:ring-amber-500 transition-all font-mono"
+                  >
+                    {PROMO_GAMES_OPTIONS.map((gameOpt) => (
+                      <option key={gameOpt.id} value={gameOpt.id}>
+                        {gameOpt.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] text-purple-300 uppercase font-black block mb-1.5">
+                      2. Reward Category
+                    </label>
+                    <select
+                      value={promoType}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPromoType(val);
+                        // Auto-fill template values
+                        if (val === 'cashback_boost') {
+                          setPromoValue('+12% Cashback');
+                        } else if (val === 'bonus_spins') {
+                          setPromoValue('40 Free Spins');
+                        } else {
+                          setPromoValue('3x Loyalty Points');
+                        }
+                      }}
+                      className="w-full bg-[#0a0510] border border-purple-900 text-purple-200 rounded p-2 text-xs focus:ring-1 focus:ring-amber-500 transition-all font-mono"
+                    >
+                      <option value="cashback_boost">🛡️ Boosted Cashback</option>
+                      <option value="bonus_spins">🎰 Reward Free Spins</option>
+                      <option value="loyalty_boost">💎 VIP Loyalty Boost</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-purple-300 uppercase font-black block mb-1.5">
+                      3. Reward Value Badge
+                    </label>
+                    <input
+                      type="text"
+                      value={promoValue}
+                      onChange={(e) => setPromoValue(e.target.value)}
+                      className="w-full bg-[#0a0510] border border-purple-900 text-[#00e600] rounded p-2 text-xs font-bold font-mono focus:ring-1 focus:ring-amber-500"
+                      placeholder="+15% Cashback"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-purple-300 uppercase font-black block mb-1.5">
+                    4. Promotion Campaign Header
+                  </label>
+                  <input
+                    type="text"
+                    value={bannerTitle}
+                    onChange={(e) => setBannerTitle(e.target.value)}
+                    className="w-full bg-[#0a0510] border border-purple-900 text-white rounded p-2 text-xs font-semibold focus:ring-1 focus:ring-amber-500"
+                    placeholder="Fruit Mania 777 Cashback Turbo Boost!"
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Descriptions and preview */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] text-purple-300 uppercase font-black block mb-1.5">
+                    5. Promo Pitch Description
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="w-full bg-[#0a0510] border border-purple-900 text-purple-200 rounded p-2 text-xs focus:ring-1 focus:ring-amber-500 transition-all"
+                    placeholder="Describe what players win..."
+                  />
+                </div>
+
+                {/* Live Preview mock visual card */}
+                <div className="bg-[#0c0519]/70 border border-purple-500/25 p-3 rounded-xl space-y-2">
+                  <span className="text-[8px] uppercase font-bold text-gray-500 tracking-widest block font-mono">
+                    LOBBY PREVIEW SIMULATOR
+                  </span>
+                  <div className="bg-[#140b2a] border border-amber-500/20 p-2.5 rounded-xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-400/40 flex items-center justify-center text-xl shrink-0">
+                      {selectedGameId === 'instant-aviator' ? '🚀' : selectedGameId === 'instant-mines' ? '💣' : '🍒'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 rounded bg-amber-400 text-black text-[7px] font-black tracking-widest uppercase">
+                          GOTW
+                        </span>
+                        <span className="text-[8px] font-mono text-[#00e600] uppercase font-black">{promoValue}</span>
+                      </div>
+                      <h4 className="text-xs font-black text-white uppercase truncate">{bannerTitle}</h4>
+                      <p className="text-[9px] text-gray-450 font-sans truncate">{description}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="border-t border-purple-900/20 pt-4 flex justify-end">
+              <button
+                type="submit"
+                className="px-6 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black uppercase text-xs tracking-widest rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                DEPLOY CAMPAIGN & BROADCAST ALERT
+              </button>
+            </div>
+          </form>
         )}
 
         {/* SUBTAB 3: JACKPOT LEVEL CONTROLLERS */}

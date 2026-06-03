@@ -147,10 +147,10 @@ export default function ResponsibleGamingModal({
                   </div>
                   <div className="mt-2">
                     <div className="text-md font-mono font-black text-white">
-                      {depositLimit !== null ? `${depositLimit.toLocaleString()} KES` : 'Unlimited'}
+                      {depositLimit !== null ? `${depositLimit.toLocaleString()} KSh` : 'Unlimited'}
                     </div>
                     <div className="text-[9px] text-gray-400 mt-1 flex justify-between items-center">
-                      <span>Deposited today: <strong className="text-emerald-400 font-mono">{totalDepositedToday} KES</strong></span>
+                      <span>Deposited today: <strong className="text-emerald-400 font-mono">{totalDepositedToday} KSh</strong></span>
                       {onResetDeposits && (
                         <button 
                           type="button"
@@ -222,7 +222,7 @@ export default function ResponsibleGamingModal({
               {/* Deposit limit input */}
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Daily Deposit Limit (KES)</label>
+                  <label className="text-[10px] text-gray-500 uppercase font-black tracking-wider">Daily Deposit Limit (KSh)</label>
                   <label className="text-[9px] text-[#00e600] font-bold">Limit: 24h cycle</label>
                 </div>
                 <div className="relative">
@@ -232,9 +232,9 @@ export default function ResponsibleGamingModal({
                     value={tempLimit}
                     onChange={(e) => setTempLimit(e.target.value)}
                     className="w-full pl-10 pr-16 py-2.5 bg-[#0e0f11] text-white rounded-lg border border-[#2c2d34] text-xs font-mono outline-none focus:border-emerald-500 transition-all font-bold"
-                    placeholder="Enter max KES (e.g. 5000) or leave empty for no limit"
+                    placeholder="Enter max KSh (e.g. 5000) or leave empty for no limit"
                   />
-                  <span className="absolute right-3.5 top-3 text-[10px] text-gray-500 font-bold">KES / DAY</span>
+                  <span className="absolute right-3.5 top-3 text-[10px] text-gray-500 font-bold">KSh / DAY</span>
                 </div>
               </div>
 

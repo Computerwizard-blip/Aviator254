@@ -21,14 +21,17 @@ export interface UserProfile {
   phone: string;
   avatar: string;
   language: 'EN' | 'ES' | 'FR' | 'SW';
-  currency: 'USD' | 'EUR' | 'KES' | 'ZAR';
+  currency: 'USD' | 'EUR' | 'KES' | 'KSh' | 'ZAR';
   vipLevel: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Elite';
   vipPoints: number;
   joinedDate: string;
+  fullName?: string;
 }
 
 export interface Wallet {
   mainBalance: number;
+  realBalance: number;
+  demoBalance: number;
   bonusBalance: number;
   cashbackBalance: number;
 }

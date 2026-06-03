@@ -128,7 +128,7 @@ export default function BonusesTournaments({
       return;
     }
 
-    const reward = 10.00; // $10 free bonus
+    const reward = 1000.00; // 1,000 KSh free bonus
     setWallet(w => ({
       ...w,
       bonusBalance: w.bonusBalance + reward
@@ -137,13 +137,13 @@ export default function BonusesTournaments({
     addTransaction({
       type: 'bonus_credit',
       amount: reward,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Daily Loyalty Claim',
       status: 'SUCCESS'
     });
 
     setHasClaimedDaily(true);
-    triggerNotification('Daily Reward Claimed', `Successfully credited +$${reward.toFixed(2)} to your Promo Bonus Wallet!`, 'bonus');
+    triggerNotification('Daily Reward Claimed', `Successfully credited +KSh ${reward.toLocaleString()} to your Promo Bonus Wallet!`, 'bonus');
   };
 
   const copyRefLink = () => {
@@ -467,11 +467,11 @@ export default function BonusesTournaments({
                       addTransaction({
                         type: 'bonus_credit',
                         amount: activeCash,
-                        currency: 'USD',
+                        currency: 'KSh',
                         method: 'Cashback Insurance Claim',
                         status: 'SUCCESS'
                       });
-                      triggerNotification('Cashback Reclaimed!', `Transferred $${activeCash.toFixed(2)} insurance refund to Main Balance!`, 'bonus');
+                      triggerNotification('Cashback Reclaimed!', `Transferred KSh ${activeCash.toLocaleString()} insurance refund to Main Balance!`, 'bonus');
                     }}
                     className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 font-bold text-[10px] uppercase tracking-wider text-white rounded"
                   >

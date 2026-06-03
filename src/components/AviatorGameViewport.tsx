@@ -13,6 +13,7 @@ interface AviatorGameViewportProps {
   countdownValue: number | null;
   onlinePlayersCount: number;
   avatarList: string[];
+  authSessionMode?: 'demo' | 'real' | null;
 }
 
 export default function AviatorGameViewport({
@@ -21,7 +22,8 @@ export default function AviatorGameViewport({
   crashStatusMessage,
   countdownValue,
   onlinePlayersCount,
-  avatarList
+  avatarList,
+  authSessionMode
 }: AviatorGameViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -237,12 +239,19 @@ export default function AviatorGameViewport({
         className="absolute inset-0 block w-full h-full pointer-events-none z-0"
       />
 
-      {/* 2. Top-Left Overlay Pill Indicator - FUN MODE badge */}
+      {/* 2. Top-Left Overlay Pill Indicator - Dynamic Play Mode badge */}
       <div className="absolute top-3 left-4 z-10 select-none flex items-center gap-1">
-        <div className="bg-[#1b1c21]/90 border border-amber-500/25 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-          <span className="text-[10px] uppercase font-black tracking-wider text-amber-400">FUN MODE</span>
-        </div>
+        {authSessionMode === 'real' ? (
+          <div className="bg-[#1b1c21]/90 border border-emerald-500/25 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-[10px] uppercase font-black tracking-wider text-emerald-400">REAL MODE</span>
+          </div>
+        ) : (
+          <div className="bg-[#1b1c21]/90 border border-amber-500/25 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+            <span className="text-[10px] uppercase font-black tracking-wider text-amber-400">FUN MODE</span>
+          </div>
+        )}
       </div>
 
       {/* 3. CENTER OVERLAY CONTENT: Dynamic multipliers counting or Pre-flight indicators */}
@@ -305,7 +314,7 @@ export default function AviatorGameViewport({
                       {crashStatusMessage}
                     </div>
                     <div className="text-sm font-semibold text-red-500/80 animate-pulse">
-                      System loaded & ready KES
+                      System loaded & ready KSh
                     </div>
                   </div>
                 )}

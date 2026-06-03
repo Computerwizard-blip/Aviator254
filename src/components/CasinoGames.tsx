@@ -22,9 +22,13 @@ import {
   TrendingUp,
   Sliders,
   TrendingDown,
-  Navigation
+  Navigation,
+  Crown,
+  Gift,
+  Users,
+  Copy
 } from 'lucide-react';
-import { GameItem, Wallet, Transaction } from '../types';
+import { GameItem, Wallet, Transaction, UserProfile } from '../types';
 
 interface CasinoGamesProps {
   wallet: Wallet;
@@ -35,6 +39,15 @@ interface CasinoGamesProps {
   jackpotPool: { mega: number; major: number; minor: number; mini: number };
   setActiveCategory: (cat: string) => void;
   activeCategory: string;
+  gameOfTheWeek: {
+    gameId: string;
+    promoType: string;
+    promoValue: string;
+    description: string;
+    bannerTitle: string;
+  };
+  userProfile?: UserProfile;
+  authSessionMode?: 'demo' | 'real' | null;
 }
 
 export const LISTED_GAMES: GameItem[] = [
@@ -77,10 +90,208 @@ export default function CasinoGames({
   incrementJackpots,
   jackpotPool,
   setActiveCategory,
-  activeCategory
+  activeCategory,
+  gameOfTheWeek,
+  userProfile = {
+    username: 'francypendy',
+    email: 'francypendy@gmail.com',
+    phone: '0712345678',
+    avatar: 'FP',
+    language: 'EN',
+    currency: 'KSh',
+    vipLevel: 'Silver',
+    vipPoints: 1240,
+    joinedDate: '2026-01-10'
+  },
+  authSessionMode = 'real'
 }: CasinoGamesProps) {
   const [selectedGame, setSelectedGame] = useState<GameItem | null>(null);
   const [betAmount, setBetAmount] = useState<number>(10);
+
+  // VIP Loyalty Bonus claim state & timer logic
+  const [referredList, setReferredList] = useState<{username: string; totalDeposits: number; commission: number; joinedDate: string}[]>(() => {
+    const saved = localStorage.getItem('casinohub_referred_players');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [
+      { username: 'kamau_flyer', totalDeposits: 22000, commission: 2200, joinedDate: '2026-05-12' },
+      { username: 'amina_99', totalDeposits: 14000, commission: 1400, joinedDate: '2026-05-24' },
+      { username: 'mwangi_jet', totalDeposits: 3500, commission: 350, joinedDate: '2026-05-29' },
+      { username: 'mwende_crypto', totalDeposits: 0, commission: 0, joinedDate: '2026-06-01' }
+    ];
+  });
+
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleCopyReferralCode = () => {
+    const refCode = `REF-${userProfile.username.toUpperCase()}`;
+    navigator.clipboard.writeText(refCode);
+    setCopiedCode(true);
+    triggerNotification(
+      '📋 Referral Code Copied!',
+      `Copied code "${refCode}" to clipboard! Refer players to earn a 10% instant commission!`,
+      'general'
+    );
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleSimulateReferredDeposit = () => {
+    const candidates = ['kamau_flyer', 'amina_99', 'mwangi_jet', 'mwende_crypto', 'juma_bet', 'ruth_wins', 'brian_flyer', 'sharon_spin'];
+    const randomFriend = candidates[Math.floor(Math.random() * candidates.length)];
+    const depositAmounts = [1000, 2500, 5000, 10000, 15000];
+    const amount = depositAmounts[Math.floor(Math.random() * depositAmounts.length)];
+    const commission = parseFloat((amount * 0.10).toFixed(2));
+
+    setReferredList(prev => {
+      let isExisting = false;
+      const next = prev.map(p => {
+        if (p.username === randomFriend) {
+          isExisting = true;
+          return {
+            ...p,
+            totalDeposits: p.totalDeposits + amount,
+            commission: parseFloat((p.commission + commission).toFixed(2))
+          };
+        }
+        return p;
+      });
+
+      if (!isExisting) {
+        next.push({
+          username: randomFriend,
+          totalDeposits: amount,
+          commission: commission,
+          joinedDate: new Date().toISOString().split('T')[0]
+        });
+      }
+
+      localStorage.setItem('casinohub_referred_players', JSON.stringify(next));
+      return next;
+    });
+
+    // Credit corresponding balance
+    setWallet(w => {
+      if (authSessionMode === 'real') {
+        const nextReal = parseFloat((w.realBalance + commission).toFixed(2));
+        return {
+          ...w,
+          realBalance: nextReal,
+          mainBalance: nextReal
+        };
+      } else {
+        const nextDemo = parseFloat((w.demoBalance + commission).toFixed(2));
+        return {
+          ...w,
+          demoBalance: nextDemo,
+          mainBalance: nextDemo
+        };
+      }
+    });
+
+    addTransaction({
+      type: 'bonus_credit',
+      amount: commission,
+      currency: 'KSh',
+      method: `10% commission: ${randomFriend} deposited KSh ${amount.toLocaleString()}`,
+    });
+
+    triggerNotification(
+      '💰 Commission Earned!',
+      `Your referred user "${randomFriend}" made a deposit of KSh ${amount.toLocaleString()}! You earned KSh ${commission.toLocaleString()} cash (10%)!`,
+      'bonus'
+    );
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // 30% chance every 40 seconds to simulate a referred user deposit
+      if (Math.random() < 0.35) {
+        handleSimulateReferredDeposit();
+      }
+    }, 40000);
+    return () => clearInterval(interval);
+  }, [authSessionMode, userProfile]);
+
+  const [vipBonusCooldown, setVipBonusCooldown] = useState<number>(() => {
+    const savedEnd = localStorage.getItem('casinohub_vip_bonus_cooldown_end');
+    if (savedEnd) {
+      const secondsLeft = Math.ceil((parseInt(savedEnd) - Date.now()) / 1000);
+      return secondsLeft > 0 ? secondsLeft : 0;
+    }
+    return 0;
+  });
+
+  useEffect(() => {
+    if (vipBonusCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setVipBonusCooldown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [vipBonusCooldown]);
+
+  const handleClaimVipBonus = () => {
+    if (vipBonusCooldown > 0) return;
+
+    // Loyalty Bonus configuration
+    const bonusMap: Record<UserProfile['vipLevel'], number> = {
+      Bronze: 50,
+      Silver: 150,
+      Gold: 500,
+      Platinum: 1500,
+      Diamond: 5000,
+      Elite: 15000
+    };
+
+    const reward = bonusMap[userProfile.vipLevel] || 50;
+
+    // Credit corresponding balance
+    setWallet(w => {
+      if (authSessionMode === 'real') {
+        const nextReal = parseFloat((w.realBalance + reward).toFixed(2));
+        return {
+          ...w,
+          realBalance: nextReal,
+          mainBalance: nextReal
+        };
+      } else {
+        const nextDemo = parseFloat((w.demoBalance + reward).toFixed(2));
+        return {
+          ...w,
+          demoBalance: nextDemo,
+          mainBalance: nextDemo
+        };
+      }
+    });
+
+    // Write persistent transaction history log
+    addTransaction({
+      type: 'bonus_credit',
+      amount: reward,
+      currency: 'KSh',
+      method: `VIP Loyalty Claim: ${userProfile.vipLevel} Status`,
+    });
+
+    // Notify player elegantly
+    triggerNotification(
+      '🏆 VIP Loyalty Claimed!',
+      `Successfully unlocked KSh ${reward.toLocaleString()} VIP Loyalty Reward based on your ${userProfile.vipLevel} Level!`,
+      'vip'
+    );
+
+    // Set 45 seconds claim cooldown for high engagement gaming loops
+    const nextEnd = Date.now() + 45000;
+    localStorage.setItem('casinohub_vip_bonus_cooldown_end', nextEnd.toString());
+    setVipBonusCooldown(45);
+  };
 
   // Slots Game State
   const [slotsReels, setSlotsReels] = useState<string[]>(['🍒', '💎', '🎰']);
@@ -169,11 +380,11 @@ export default function CasinoGames({
               const multi = liveUserBetOn === 'green' ? 35 : 2;
               const payout = betAmount * multi;
               setWallet(w => ({ ...w, mainBalance: w.mainBalance + payout }));
-              triggerNotification('Live Casino Win!', `You won $${payout.toFixed(2)} on Sophia's Live Roulette!`, 'general');
+              triggerNotification('Live Casino Win!', `You won KSh ${payout.toFixed(2)} on Sophia's Live Roulette!`, 'general');
               addTransaction({
                 type: 'win',
                 amount: payout,
-                currency: 'USD',
+                currency: 'KSh',
                 method: 'Live Studio Payout',
                 game: 'Lightning Roulette Live'
               });
@@ -243,7 +454,7 @@ export default function CasinoGames({
     addTransaction({
       type: 'bet',
       amount: amount,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Placed Stake',
       game: gameTitle
     });
@@ -284,12 +495,12 @@ export default function CasinoGames({
           const winMultiplier = finalReels[0] === '🎰' ? 50 : finalReels[0] === '👑' ? 30 : finalReels[0] === '💎' ? 20 : 10;
           const totalWin = betAmount * winMultiplier;
           setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + totalWin).toFixed(2)) }));
-          setSlotsStatus(`JACKPOT COMBO! 3x ${finalReels[0]} pays $${totalWin.toFixed(2)}`);
-          triggerNotification('Big Slot Win!', `Stunning jackpot combo! You won $${totalWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
+          setSlotsStatus(`JACKPOT COMBO! 3x ${finalReels[0]} pays KSh ${totalWin.toFixed(2)}`);
+          triggerNotification('Big Slot Win!', `Stunning jackpot combo! You won KSh ${totalWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
           addTransaction({
             type: 'win',
             amount: totalWin,
-            currency: 'USD',
+            currency: 'KSh',
             method: 'Slot Jackpot Win',
             game: selectedGame?.title
           });
@@ -299,11 +510,11 @@ export default function CasinoGames({
             const jpType = Math.random() > 0.8 ? 'Mega' : 'Major';
             const jpWin = jpType === 'Mega' ? jackpotPool.mega : jackpotPool.major;
             setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + jpWin).toFixed(2)) }));
-            triggerNotification('PROGRESSIVE JACKPOT WON!', `OMG! You hit the ${jpType} Jackpot for $${jpWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
+            triggerNotification('PROGRESSIVE JACKPOT WON!', `OMG! You hit the ${jpType} Jackpot for KSh ${jpWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
             addTransaction({
               type: 'win',
               amount: jpWin,
-              currency: 'USD',
+              currency: 'KSh',
               method: `Progressive ${jpType} Jackpot`,
               game: selectedGame?.title
             });
@@ -311,11 +522,11 @@ export default function CasinoGames({
         } else if (unique.size === 2) {
           const totalWin = betAmount * 1.5;
           setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + totalWin).toFixed(2)) }));
-          setSlotsStatus(`Double Combo! 2x identical symbols pays $${totalWin.toFixed(2)}`);
+          setSlotsStatus(`Double Combo! 2x identical symbols pays KSh ${totalWin.toFixed(2)}`);
           addTransaction({
             type: 'win',
             amount: totalWin,
-            currency: 'USD',
+            currency: 'KSh',
             method: 'Slot Match Win',
             game: selectedGame?.title
           });
@@ -404,13 +615,13 @@ export default function CasinoGames({
     const payout = parseFloat((betAmount * targetMult).toFixed(2));
     setCrashPayoutAmount(payout);
     setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-    setCrashMessage(`AUTO CASHOUT SUCCESS! Paid out at x${targetMult}! Got $${payout.toFixed(2)}`);
-    triggerNotification('Auto Cashout Cleared!', `Secured profit of $${payout.toFixed(2)} on x${targetMult}!`, 'general');
+    setCrashMessage(`AUTO CASHOUT SUCCESS! Paid out at x${targetMult}! Got KSh ${payout.toFixed(2)}`);
+    triggerNotification('Auto Cashout Cleared!', `Secured profit of KSh ${payout.toFixed(2)} on x${targetMult}!`, 'general');
     
     addTransaction({
       type: 'win',
       amount: payout,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Auto Cashout Target',
       game: gameTitle
     });
@@ -424,13 +635,13 @@ export default function CasinoGames({
     const payout = parseFloat((betAmount * crashMultiplier).toFixed(2));
     setCrashPayoutAmount(payout);
     setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-    setCrashMessage(`SUCCESS! Secured cashout at x${crashMultiplier}! Profit: $${payout.toFixed(2)}`);
-    triggerNotification('Cashout Claimed!', `Recalled winnings of $${payout.toFixed(2)} on ${gameLabel}!`, 'general');
+    setCrashMessage(`SUCCESS! Secured cashout at x${crashMultiplier}! Profit: KSh ${payout.toFixed(2)}`);
+    triggerNotification('Cashout Claimed!', `Recalled winnings of KSh ${payout.toFixed(2)} on ${gameLabel}!`, 'general');
     
     addTransaction({
       type: 'win',
       amount: payout,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Manual Recall Cashout',
       game: gameLabel
     });
@@ -472,11 +683,11 @@ export default function CasinoGames({
         setMinesGameOver(true);
         setMinesOutcome('WIN');
         setMinesBetPlaced(false);
-        triggerNotification('Mines Sweep Completed!', `Outstanding! You swept all tiles for $${payout.toFixed(2)}!`, 'general');
+        triggerNotification('Mines Sweep Completed!', `Outstanding! You swept all tiles for KSh ${payout.toFixed(2)}!`, 'general');
         addTransaction({
           type: 'win',
           amount: payout,
-          currency: 'USD',
+          currency: 'KSh',
           game: 'Mines Gold Mines'
         });
       }
@@ -492,12 +703,12 @@ export default function CasinoGames({
     setMinesGameOver(true);
     setMinesOutcome('WIN');
     setMinesBetPlaced(false);
-    triggerNotification('Mines Secured!', `Withdrew $${payout} with nice multiplier x${multiplier}!`, 'general');
+    triggerNotification('Mines Secured!', `Withdrew KSh ${payout} with nice multiplier x${multiplier}!`, 'general');
     
     addTransaction({
       type: 'win',
       amount: payout,
-      currency: 'USD',
+      currency: 'KSh',
       method: 'Mine Winnings Claimed',
       game: 'Mines Gold Mines'
     });
@@ -538,13 +749,13 @@ export default function CasinoGames({
       setIsPlinkoDropping(false);
       
       if (mult > 1.0) {
-        triggerNotification('Plinko Multipled Win!', `Rewarded x${mult} payouts total $${payout.toFixed(2)}`, 'general');
+        triggerNotification('Plinko Multipled Win!', `Rewarded x${mult} payouts total KSh ${payout.toFixed(2)}`, 'general');
       }
       
       addTransaction({
         type: 'win',
         amount: payout,
-        currency: 'USD',
+        currency: 'KSh',
         game: 'Plinko Multi-drops'
       });
     }, 1500);
@@ -580,11 +791,11 @@ export default function CasinoGames({
 
       if (totalWin > 0) {
         setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + totalWin).toFixed(2)) }));
-        triggerNotification('Roulette WIN!', `Winner! Drawn number is ${outcomeNum} (${color.toUpperCase()}). You earned $${totalWin}!`, 'general');
+        triggerNotification('Roulette WIN!', `Winner! Drawn number is ${outcomeNum} (${color.toUpperCase()}). You earned KSh ${totalWin}!`, 'general');
         addTransaction({
           type: 'win',
           amount: totalWin,
-          currency: 'USD',
+          currency: 'KSh',
           game: 'European Roulette Pro'
         });
       } else {
@@ -680,23 +891,23 @@ export default function CasinoGames({
     if (dealerSum > 21) {
       const payout = betAmount * 2;
       setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-      setBlackjackStatus(`WINNER! Dealer busted with ${dealerSum}! Credited $${payout.toFixed(2)}`);
-      triggerNotification('Dealer busted!', `Blackjack profit transferred of $${payout.toFixed(2)}`, 'general');
+      setBlackjackStatus(`WINNER! Dealer busted with ${dealerSum}! Credited KSh ${payout.toFixed(2)}`);
+      triggerNotification('Dealer busted!', `Blackjack profit transferred of KSh ${payout.toFixed(2)}`, 'general');
       addTransaction({
         type: 'win',
         amount: payout,
-        currency: 'USD',
+        currency: 'KSh',
         game: 'Classic Blackjack Multi-hand'
       });
     } else if (playerSum > dealerSum) {
       const payout = betAmount * 2;
       setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-      setBlackjackStatus(`WINNER! You scored ${playerSum} vs Dealer's ${dealerSum}! Credited $${payout.toFixed(2)}`);
-      triggerNotification('Blackjack clear!', `Beated croupier! Won $${payout.toFixed(2)}!`, 'general');
+      setBlackjackStatus(`WINNER! You scored ${playerSum} vs Dealer's ${dealerSum}! Credited KSh ${payout.toFixed(2)}`);
+      triggerNotification('Blackjack clear!', `Beated croupier! Won KSh ${payout.toFixed(2)}!`, 'general');
       addTransaction({
         type: 'win',
         amount: payout,
-        currency: 'USD',
+        currency: 'KSh',
         game: 'Classic Blackjack Multi-hand'
       });
     } else if (playerSum === dealerSum) {
@@ -708,15 +919,18 @@ export default function CasinoGames({
   };
 
   // --- MEGA SPINNING WHEEL ENGINE ---
+  // 4 numbers x2 to x9 randomly arranged with 6 enhancing x0, x1 numbers
   const sectorsList = [
-    { sector: 'x1', mult: 1, color: '#a855f7' },
-    { sector: 'x2', mult: 2, color: '#3b82f6' },
-    { sector: 'x5', mult: 5, color: '#10b981' },
-    { sector: 'x10', mult: 10, color: '#f59e0b' },
-    { sector: 'x20', mult: 20, color: '#ec4899' },
-    { sector: 'x40', mult: 40, color: '#ef4444' },
-    { sector: 'FREE SPINS', mult: 0, color: '#ffd700' },
-    { sector: 'BOMB', mult: 0, color: '#1e293b' },
+    { sector: 'x3', mult: 3, color: '#3b82f6' }, // index 0 (Profit win)
+    { sector: 'x0', mult: 0, color: '#252830' }, // index 1 (Loss)
+    { sector: 'x5', mult: 5, color: '#10b981' }, // index 2 (Profit win)
+    { sector: 'x1', mult: 1, color: '#475569' }, // index 3 (Push)
+    { sector: 'x7', mult: 7, color: '#f59e0b' }, // index 4 (Profit win)
+    { sector: 'x0', mult: 0, color: '#252830' }, // index 5 (Loss)
+    { sector: 'x9', mult: 9, color: '#ec4899' }, // index 6 (Profit win)
+    { sector: 'x1', mult: 1, color: '#475569' }, // index 7 (Push)
+    { sector: 'x0', mult: 0, color: '#252830' }, // index 8 (Loss)
+    { sector: 'x1', mult: 1, color: '#475569' }, // index 9 (Push)
   ];
 
   const triggerMegaWheel = () => {
@@ -726,8 +940,19 @@ export default function CasinoGames({
     setWheelSpinning(true);
     setWheelSelectedItem(null);
 
-    // Randomize winning sector
-    const rollIndex = Math.floor(Math.random() * sectorsList.length);
+    // Enforce strict 50% Win Rate silently behind the scenes
+    const isWinOutcome = Math.random() < 0.50; // Exact 50% win probability
+    
+    let rollIndex = 0;
+    if (isWinOutcome) {
+      // Land on profit multipliers (indexed x3, x5, x7, x9)
+      const winIndices = [0, 2, 4, 6];
+      rollIndex = winIndices[Math.floor(Math.random() * winIndices.length)];
+    } else {
+      // Land on neutral/loss multipliers (indexed x0, x1)
+      const loseIndices = [1, 3, 5, 7, 8, 9];
+      rollIndex = loseIndices[Math.floor(Math.random() * loseIndices.length)];
+    }
     const selected = sectorsList[rollIndex];
     
     // Add multiple rotations (360 * 5) and align degree offset
@@ -738,27 +963,31 @@ export default function CasinoGames({
       setWheelSpinning(false);
       setWheelSelectedItem(selected);
 
-      if (selected.sector === 'BOMB') {
-        triggerNotification('Exploded Sector!', 'BOMB landed. Wager is claimed by house.', 'general');
-      } else if (selected.sector === 'FREE SPINS') {
-        triggerNotification('Free Roll Bonus!', '5 bonus free play coins credited!', 'bonus');
-        setWallet(w => ({ ...w, bonusBalance: w.bonusBalance + 50 }));
+      const payout = parseFloat((betAmount * selected.mult).toFixed(2));
+      if (payout > 0) {
+        setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+      }
+
+      if (selected.mult > 1) {
+        triggerNotification('Mega Wheel Win!', `Matched multiplier ${selected.sector}! Credited KSh ${payout.toFixed(2)} received!`, 'general');
+        addTransaction({
+          type: 'win',
+          amount: payout,
+          currency: 'KSh',
+          method: 'Wheel Win Payout',
+          game: 'Mega Wheel Spin'
+        });
+      } else if (selected.mult === 1) {
+        triggerNotification('Wager Returned', `Landed on x1. Push - stake returned.`, 'general');
+        addTransaction({
+          type: 'win',
+          amount: payout,
+          currency: 'KSh',
+          method: 'Wheel Push Return',
+          game: 'Mega Wheel Spin'
+        });
       } else {
-        const isMatched = (wheelBetOn === selected.sector);
-        if (isMatched) {
-          const payout = parseFloat((betAmount * selected.mult).toFixed(2));
-          setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-          triggerNotification('Spin Wheel Match!', `Matched ${selected.sector}! Payout $${payout.toFixed(2)} received!`, 'general');
-          addTransaction({
-            type: 'win',
-            amount: payout,
-            currency: 'USD',
-            method: 'Wheel Win Payout',
-            game: 'Mega Wheel Spin'
-          });
-        } else {
-          triggerNotification('No Sector Match!', `Wheel stopped on ${selected.sector}. You placed stake on ${wheelBetOn}.`, 'general');
-        }
+        triggerNotification('House Wins!', `Stopped on x0. Better luck next spin!`, 'general');
       }
     }, 2800);
   };
@@ -779,11 +1008,11 @@ export default function CasinoGames({
       if (coinBetOn === randResult) {
         const payout = parseFloat((betAmount * 1.96).toFixed(2));
         setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-        triggerNotification('Coin Flip Win!', `Matched ${randResult.toUpperCase()}! You won $${payout}!`, 'general');
+        triggerNotification('Coin Flip Win!', `Matched ${randResult.toUpperCase()}! You won KSh ${payout}!`, 'general');
         addTransaction({
           type: 'win',
           amount: payout,
-          currency: 'USD',
+          currency: 'KSh',
           game: 'Turbo Coin Flip'
         });
       } else {
@@ -816,11 +1045,11 @@ export default function CasinoGames({
         const payout = parseFloat((betAmount * multiplier).toFixed(2));
 
         setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-        triggerNotification('Dice Master Win!', `Rolled ${outcome}! You matched Over/Under target and won $${payout}!`, 'general');
+        triggerNotification('Dice Master Win!', `Rolled ${outcome}! You matched Over/Under target and won KSh ${payout}!`, 'general');
         addTransaction({
           type: 'win',
           amount: payout,
-          currency: 'USD',
+          currency: 'KSh',
           game: 'Master Roll Dice'
         });
       } else {
@@ -1270,7 +1499,7 @@ export default function CasinoGames({
                       onClick={initiateBlackjack}
                       className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold rounded text-xs uppercase"
                     >
-                      DEAL DECK STAKE (${betAmount})
+                      DEAL DECK STAKE (KSh {betAmount.toLocaleString()})
                     </button>
                   </div>
                 )}
@@ -1423,28 +1652,32 @@ export default function CasinoGames({
                   )}
                 </div>
 
-                {/* Right sector picker bet layout */}
-                <div className="w-full md:w-44 bg-[#0a0513] p-3 rounded-lg border border-purple-900/30 text-left">
-                  <span className="text-[10px] text-purple-400 font-bold tracking-widest mb-2 block uppercase">Select target block</span>
-                  
-                  <div className="grid grid-cols-2 gap-1 mb-3">
-                    {['x1', 'x2', 'x5', 'x10', 'x20', 'x40'].map((sector) => (
-                      <button 
-                        key={sector}
-                        onClick={() => setWheelBetOn(sector)}
-                        className={`py-1.5 rounded text-[10px] font-mono font-bold transition-all ${wheelBetOn === sector ? 'bg-amber-400 text-black border-amber-500 shadow-md scale-102' : 'bg-purple-950/40 text-purple-200 border border-purple-500/10 hover:bg-purple-900/20'}`}
-                      >
-                        {sector}
-                      </button>
-                    ))}
+                {/* Right sector picker info layout */}
+                <div className="w-full md:w-48 bg-[#0a0513] p-4 rounded-xl border border-purple-900/30 text-left flex flex-col justify-between min-h-[170px]">
+                  <div>
+                    <span className="text-[10px] text-amber-400 font-bold tracking-widest mb-1.5 block uppercase">Multiplier Wheel</span>
+                    <p className="text-[10px] text-purple-200/70 leading-relaxed mb-3">
+                      Place your stake, click spin, and secure whatever multiplier lands directly!
+                    </p>
+                    
+                    <div className="space-y-1 mb-3">
+                      <div className="flex items-center justify-between text-[9px] bg-purple-950/20 px-2 py-0.5 rounded border border-purple-900/10 font-mono">
+                        <span className="text-purple-300">Wager Sectors:</span>
+                        <span className="text-amber-400 font-bold">x3, x5, x7, x9</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[9px] bg-purple-950/20 px-2 py-0.5 rounded border border-purple-900/10 font-mono">
+                        <span className="text-purple-400">Base Sectors:</span>
+                        <span className="text-gray-400">x0 (Loss), x1 (Push)</span>
+                      </div>
+                    </div>
                   </div>
 
                   <button 
                     onClick={triggerMegaWheel}
                     disabled={wheelSpinning}
-                    className="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold uppercase text-[10px] tracking-widest rounded disabled:opacity-50"
+                    className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-black uppercase text-[10px] tracking-widest rounded-lg shadow-lg shadow-amber-500/10 active:scale-95 transition-all disabled:opacity-50 cursor-pointer hover:shadow-yellow-500/20"
                   >
-                    {wheelSpinning ? 'SPINNING...' : 'SPIN MEGA WHEEL'}
+                    {wheelSpinning ? 'SPINNING...' : 'SPIN WHEEL'}
                   </button>
                 </div>
 
@@ -1550,7 +1783,7 @@ export default function CasinoGames({
 
                   <div className="flex justify-between items-center text-[10px] font-mono text-gray-400">
                     <span>Calculated Pay Multiplier: <strong className="text-amber-400">x{currentMultiplier}</strong></span>
-                    <span>Payout: <strong className="text-purple-300">${(betAmount * currentMultiplier).toFixed(2)}</strong></span>
+                    <span>Payout: <strong className="text-purple-300">KSh {(betAmount * currentMultiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                   </div>
                 </div>
 
@@ -1584,9 +1817,9 @@ export default function CasinoGames({
           </div>
 
           <div className="mt-3.5 flex items-center justify-between text-[10px] text-purple-400/50">
-            <span>Minimum wager limit: ${selectedGame.minBet.toFixed(2)}</span>
+            <span>Minimum wager limit: KSh {selectedGame.minBet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             <span className="flex items-center gap-1">🛡️ Provably Fair RNG Verified</span>
-            <span>Maximum wager limit: ${selectedGame.maxBet.toFixed(2)}</span>
+            <span>Maximum wager limit: KSh {selectedGame.maxBet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
         </div>
@@ -1594,6 +1827,111 @@ export default function CasinoGames({
         /* STANDARD ALL CATEGORIES LOBBY GAMES LIST GRID CONTAINER */
         <div className="flex flex-col gap-4">
           
+          {/* Game of the Week Prominent Premium Showcase */}
+          {gameOfTheWeek && (
+            <div className="bg-gradient-to-r from-amber-600/10 via-purple-900/10 to-amber-600/10 border-2 border-amber-500/25 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none relative overflow-hidden backdrop-blur-md shadow-[0_0_35px_rgba(245,158,11,0.08)]">
+              {/* Abs decorative background elements for layout depth */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none"></div>
+              
+              <div className="flex items-center gap-4 text-left">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border-2 border-amber-400/40 flex items-center justify-center text-3xl shrink-0 animate-pulse">
+                  {LISTED_GAMES.find(g => g.id === gameOfTheWeek.gameId)?.emoji || '🏆'}
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-amber-400 text-black text-[8px] font-black tracking-widest uppercase">
+                      🔥 GAME OF THE WEEK
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/20 text-[#00e600] text-[8px] font-mono font-black uppercase">
+                      {gameOfTheWeek.promoValue}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
+                    {gameOfTheWeek.bannerTitle}
+                  </h3>
+                  <p className="text-[10px] text-gray-300 max-w-lg leading-relaxed">
+                    {gameOfTheWeek.description}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const targetGame = LISTED_GAMES.find(g => g.id === gameOfTheWeek.gameId);
+                  if (targetGame) handleGameSelect(targetGame);
+                }}
+                className="w-full md:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black uppercase text-[10px] tracking-wider rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer shrink-0"
+              >
+                Launch & Spin
+              </button>
+            </div>
+          )}
+
+          {/* VIP Loyalty Bonus Premium Interactive Panel */}
+          <div className="bg-gradient-to-r from-purple-950/40 via-[#180931] to-purple-950/40 border-2 border-purple-500/25 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none relative overflow-hidden backdrop-blur-md shadow-[0_0_25px_rgba(147,51,234,0.12)]">
+            {/* Abs decorative background elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/5 rounded-full blur-xl pointer-events-none"></div>
+            
+            <div className="flex items-center gap-4 text-left w-full md:w-auto">
+              <div className="w-14 h-14 rounded-2xl bg-[#2a1354] border-2 border-purple-400/50 flex flex-col items-center justify-center text-3xl shrink-0 shadow-[0_0_15px_rgba(147,51,234,0.3)]">
+                <Crown className="w-7 h-7 text-yellow-500 animate-pulse" />
+              </div>
+              
+              <div className="space-y-1 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-purple-600 text-white text-[8px] font-black tracking-widest uppercase animate-pulse">
+                    🏆 VIP CLUB COFFER
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-black/40 border border-purple-500/30 text-purple-300 text-[8px] font-mono font-black uppercase">
+                    Level: {userProfile.vipLevel}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-[#00e600] border border-emerald-500/20 text-[8px] font-mono font-bold leading-none">
+                    + KSh {
+                      userProfile.vipLevel === 'Bronze' ? '50' :
+                      userProfile.vipLevel === 'Silver' ? '150' :
+                      userProfile.vipLevel === 'Gold' ? '500' :
+                      userProfile.vipLevel === 'Platinum' ? '1,500' :
+                      userProfile.vipLevel === 'Diamond' ? '5,000' : '15,000'
+                    }
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight flex items-center gap-1.5">
+                  {userProfile.vipLevel} Status Loyalty Reward
+                </h3>
+                <p className="text-[10px] text-purple-200/80 max-w-lg leading-relaxed">
+                  As a distinguished <strong className="text-pink-400 font-extrabold">{userProfile.vipLevel}</strong> tier member, claim your recurring cash loyalty reload instantly! High VIP status ranks yield up to KSh 15,000.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-stretch md:items-end gap-1.5 w-full md:w-auto shrink-0">
+              {vipBonusCooldown > 0 ? (
+                <div className="space-y-1 w-full md:w-44">
+                  <div className="flex items-center justify-between text-[9px] text-purple-300 font-bold uppercase font-mono px-0.5">
+                    <span>Reloading...</span>
+                    <span>{vipBonusCooldown}s</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-black/45 rounded-full overflow-hidden border border-purple-900/30">
+                    <div 
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000"
+                      style={{ width: `${(vipBonusCooldown / 45) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleClaimVipBonus}
+                  className="w-full md:w-auto px-5 py-2.5 bg-gradient-to-r from-purple-600 via-purple-750 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black uppercase text-[10px] tracking-wider rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-purple-500/35 transition-all outline-none border border-purple-400/20 active:scale-[0.98] cursor-pointer"
+                >
+                  🎁 Claim Loyalty Bonus
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between flex-wrap gap-4 border-b border-purple-900/30 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="text-lg font-black tracking-tight text-white uppercase italic">Casino Lobby Grounds</span>
@@ -1625,19 +1963,24 @@ export default function CasinoGames({
           {/* Grid high density cards viewport */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5">
             {filteredGames.map((game) => {
-              const hotHighlight = ['slot-video', 'instant-aviator', 'instant-crush', 'instant-wheel', 'instant-mines'].includes(game.id);
+              const isGameOfTheWeek = game.id === gameOfTheWeek?.gameId;
+              const hotHighlight = ['slot-video', 'instant-aviator', 'instant-crush', 'instant-wheel', 'instant-mines'].includes(game.id) || isGameOfTheWeek;
               return (
                 <div 
                   key={game.id}
                   onClick={() => handleGameSelect(game)}
-                  className={`cursor-pointer group relative rounded-xl overflow-hidden bg-[#0c0519]/90 border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 flex flex-col h-56 ${hotHighlight ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.06)] bg-gradient-to-br from-[#180d28] to-[#0a0414]' : 'border-purple-900/30 hover:border-purple-500/30'}`}
+                  className={`cursor-pointer group relative rounded-xl overflow-hidden bg-[#0c0519]/90 border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 flex flex-col h-56 ${isGameOfTheWeek ? 'border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-gradient-to-br from-[#24133d] to-[#0c0415]' : hotHighlight ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.06)] bg-gradient-to-br from-[#180d28] to-[#0a0414]' : 'border-purple-900/30 hover:border-purple-500/30'}`}
                 >
                   
-                  {hotHighlight && (
+                  {isGameOfTheWeek ? (
+                    <div className="absolute top-2.5 left-2.5 z-10 px-1.5 py-0.5 rounded bg-[#00e600] text-black text-[8px] font-black tracking-widest uppercase">
+                      ✨ GOTW
+                    </div>
+                  ) : hotHighlight ? (
                     <div className="absolute top-2.5 left-2.5 z-10 px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-yellow-500 text-black text-[8px] font-black tracking-widest uppercase">
                       ACTIVE SECTOR
                     </div>
-                  )}
+                  ) : null}
 
                   {game.jackpotEligible && (
                     <div className="absolute top-2.5 right-2.5 z-10 px-1.5 py-0.5 rounded bg-purple-600/95 text-white text-[8px] font-black tracking-widest uppercase border border-purple-400/40">
@@ -1673,6 +2016,139 @@ export default function CasinoGames({
                 </div>
               );
             })}
+          </div>
+
+          {/* PLAYER ACCOUNT PROFILE & REFERRER AFFILIATE DECK */}
+          <div className="mt-12 bg-gradient-to-b from-[#140b2a] via-[#0d071d] to-[#080312] border-2 border-purple-500/20 rounded-2xl p-5 sm:p-6 space-y-6 select-none relative overflow-hidden backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+            
+            {/* Abs decorative gradient glow background */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-purple-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+            {/* Header Area */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-purple-900/30">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-purple-600/20 border-2 border-purple-500/40 flex items-center justify-center text-xl font-black text-purple-200 uppercase">
+                  {userProfile.avatar || 'FP'}
+                </div>
+                <div className="text-left">
+                  <h3 className="text-sm font-black text-white uppercase tracking-tight">
+                    {userProfile.fullName || 'Frank Janal'}
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20 text-[8px] font-black uppercase">
+                      👑 {userProfile.vipLevel} Status
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      Joined {userProfile.joinedDate || '2026-06-03'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSimulateReferredDeposit}
+                  className="px-3.5 py-1.5 bg-[#4ea300]/15 hover:bg-[#4ea300]/25 border border-[#4ea300]/40 hover:border-[#4ea300]/60 text-[#4ea300] font-black uppercase text-[9px] tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                  title="Simulate a referred friend making a cash deposit to earn instant 10% commission"
+                >
+                  <Zap className="w-3 h-3 text-[#4ea300] animate-pulse" />
+                  <span>Test Deposit (10% Referral Commission)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Main Interactive Referral Engine Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              
+              {/* Left Column: Your Referral code card */}
+              <div className="lg:col-span-5 bg-black/45 p-4 sm:p-5 rounded-xl border border-purple-900/20 space-y-4 flex flex-col justify-between">
+                
+                <div className="space-y-1">
+                  <span className="px-2 py-0.5 rounded bg-amber-500 text-black text-[8px] font-black tracking-widest uppercase">
+                    🎁 PASSIVE EARNINGS ENGINE
+                  </span>
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Your Unique Referral Link</h4>
+                  <p className="text-[10px] text-gray-500 leading-relaxed text-left">
+                    Refer friends to CasinoHub and instantly receive a <strong className="text-purple-400 font-bold">10% cash commission</strong> of whatever they deposit, credited straight into your main playable balance!
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text"
+                      readOnly
+                      value={`REF-${userProfile.username.toUpperCase()}`}
+                      className="flex-1 text-center bg-[#0d071a] border border-purple-900/50 rounded-lg p-2.5 text-xs font-mono font-bold text-amber-300 pointer-events-none select-all focus:outline-none uppercase"
+                    />
+                    <button 
+                      onClick={handleCopyReferralCode}
+                      className="px-3.5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-transform active:scale-95 cursor-pointer flex items-center justify-center shrink-0 border border-purple-400/20"
+                      title="Copy referral invitation code"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  
+                  <div className="bg-[#120722] py-2.5 px-3 rounded-lg border border-purple-900/30 flex items-center justify-between">
+                    <div className="text-left">
+                      <span className="text-[8px] text-gray-400 uppercase tracking-widest block font-mono">Commission Level</span>
+                      <strong className="text-[11px] font-black text-white font-sans">10% of ALL Depositors</strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[8px] text-gray-400 uppercase tracking-widest block font-mono">Total Earnings</span>
+                      <strong className="text-sm font-bold text-[#00e600] font-mono leading-none">
+                        KSh {referredList.reduce((acc, current) => acc + current.commission, 0).toLocaleString()}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Column: Referred Players Ledger list table */}
+              <div className="lg:col-span-7 bg-black/45 p-4 sm:p-5 rounded-xl border border-purple-900/20 space-y-3">
+                
+                <div className="flex items-center justify-between pb-1">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                    <span>Your Referred Friends ({referredList.length})</span>
+                  </h4>
+                  <span className="text-[9px] text-purple-300 font-mono font-semibold uppercase">10% Earned Ledger</span>
+                </div>
+
+                <div className="overflow-x-auto min-h-[135px] max-h-[145px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-900/40">
+                  <table className="w-full text-left font-mono text-[10.5px]">
+                    <thead>
+                      <tr className="border-b border-purple-900/30 text-[8.5px] text-purple-400 font-black uppercase text-left pb-1">
+                        <th className="pb-1 text-left text-[8.5px]">Username</th>
+                        <th className="pb-1 text-center text-[8.5px]">Date Joined</th>
+                        <th className="pb-1 text-right text-[8.5px]">Deposited</th>
+                        <th className="pb-1 text-right text-[8.5px]">Commission (10%)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-purple-900/10 text-purple-200/80">
+                      {referredList.map((referred) => (
+                        <tr key={referred.username} className="hover:bg-white/5 transition-colors">
+                          <td className="py-2.5 font-bold text-[#fbbf24] text-left">{referred.username}</td>
+                          <td className="py-2.5 text-gray-500 text-center">{referred.joinedDate}</td>
+                          <td className="py-2.5 text-right font-medium text-white">KSh {referred.totalDeposits.toLocaleString()}</td>
+                          <td className="py-2.5 text-right font-black text-[#00e600]">+KSh {referred.commission.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <p className="text-[8px] text-gray-600 block leading-tight text-left italic">
+                  * Live Commission engine: Whenever referred friends initiate deposits via M-pesa Till, you receive a payout instantly. Tested & validated on current active currency.
+                </p>
+
+              </div>
+
+            </div>
+
           </div>
 
         </div>
