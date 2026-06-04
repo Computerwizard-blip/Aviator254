@@ -26,6 +26,7 @@ export interface UserProfile {
   vipPoints: number;
   joinedDate: string;
   fullName?: string;
+  referralCode?: string;
 }
 
 export interface Wallet {

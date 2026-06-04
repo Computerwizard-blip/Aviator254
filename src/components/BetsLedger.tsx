@@ -29,6 +29,79 @@ interface BetsLedgerProps {
   crashActive: boolean;
   crashMultiplier: number;
   multipliers: number[];
+  roundIndex?: number;
+}
+
+const USERS_LIST = [
+  'Mpesa_Guru', 'Matatu_Racer', 'CoinSlinger_KE', 'Nairobi_Hustler', 'Alpha_Bet_99',
+  'Safari_King', 'Jambo_Spins', 'Boda_Boda_Flyer', 'Oloiboni', 'Kilimanjaro_Bet',
+  'Serengeti_Gold', 'Shujaa_X', 'Wanjiku_Wins', 'Kiprotich_Speed', 'Biko_Shaker',
+  'Lucky_Otieno', 'Amani_Champs', 'Mwangi_Vip', 'Kamau_Plaza', 'Wamae_Rider',
+  'Gikomba_Trader', 'Bargain_Hunter', 'Karura_Runner', 'Heko_Spins', 'Zuri_Flyer',
+  'Pesa_Pap', 'Shilingi_Boss', 'Uhuru_Winger', 'Nyama_Choma', 'Kona_Mkali',
+  'Chunga_Sana', 'Kazi_Iendelee', 'Tausi_Queen', 'Teke_Teke', 'Simba_Nguvu',
+  'Viwambo_Spins', 'Mchezo_Sana', 'Asante_Sana', 'Rafiki_Wote', 'Karibu_Beti',
+  'Hakuna_Matata', 'Lamu_Sailor', 'Voi_Voyager', 'Mombasa_Wave', 'Nanyuki_Star',
+  'Eldoret_Turbo', 'Nakuru_Flamingo', 'Kisumu_Fish', 'Kakamega_Forest', 'Meru_Gold',
+  'Thika_Pineapple', 'Machakos_Hero', 'Kitui_Honey', 'Garissa_Sun', 'Turkana_Wind',
+  'Marsabit_Rock', 'Wajir_Camel', 'Mandera_Gate', 'Isiolo_Hub', 'Embu_Hill',
+  'Kericho_Tea', 'Bomet_Potato', 'Narok_Wheat', 'Kajiado_Beast', 'Naivasha_Breeze',
+  'Nyeri_Coffee', 'Kiambu_Real', 'Muranga_Hills', 'Laikipia_Plain', 'Samburu_Warrior',
+  'Kwale_Coconut', 'Kilifi_Cashew', 'Taita_Sisal', 'Tana_River', 'Lamu_Old_Town',
+  'Busia_Border', 'Vihiga_Hills', 'Bungoma_Sugar', 'Siaya_Sega', 'Homa_Bay',
+  'Migori_Gold', 'Kisii_Banana', 'Nyamira_High', 'Kericho_Green', 'Nandi_Bear',
+  'Uasin_Gishu', 'Elgeyo_Marakwet', 'Baringo_Lake', 'West_Pokot', 'Trans_Nzoia',
+  'Turkana_Lake', 'Samburu_Game', 'Isiolo_Camel', 'Tharaka_Nithi', 'Makueni_Fruit',
+  'Kajiado_Soda', 'Narok_Maasai', 'Bomet_Dairy', 'Kericho_Borders', 'Kisumu_Sunset',
+  'Siaya_Obama', 'Homa_Bay_Pier', 'Migori_Mine', 'Kisii_Soapstone', 'Nyamira_Tea'
+];
+
+export function generateRandomTopBets() {
+  const shuffledUsers = [...USERS_LIST].sort(() => Math.random() - 0.5);
+  const total = 112; // Over 100 top names
+  const list = [];
+
+  const maxPayout = 1200000;
+  const minPayout = 15000;
+
+  for (let i = 0; i < total; i++) {
+    const ratio = 1 - (i / (total - 1));
+    const rawPayout = minPayout + (maxPayout - minPayout) * Math.pow(ratio, 2.2);
+    // Add significant random noise to payout so they fluctuate completely differently each bet
+    const noise = (Math.random() - 0.5) * 8000;
+    const payout = Math.max(10000, Math.round(rawPayout + noise));
+
+    let username = shuffledUsers[i % shuffledUsers.length];
+    if (i >= shuffledUsers.length) {
+      username = `${username}_${i}`;
+    }
+
+    let betAmount = 1000;
+    if (payout > 800000) {
+      betAmount = Math.random() > 0.5 ? 2500 : 2000;
+    } else if (payout > 400000) {
+      betAmount = Math.random() > 0.5 ? 1500 : 1000;
+    } else if (payout > 100000) {
+      betAmount = Math.random() > 0.5 ? 800 : 500;
+    } else {
+      betAmount = Math.random() > 0.5 ? 300 : 100;
+    }
+
+    const multiplier = parseFloat((payout / betAmount).toFixed(2));
+    const daysAgo = Math.floor(i / 10);
+    const dateStr = daysAgo === 0 ? 'Today, ' + (12 - (i % 12)) + ':14' : `${daysAgo} days ago`;
+
+    list.push({
+      username,
+      multiplier,
+      betAmount,
+      payout,
+      date: dateStr
+    });
+  }
+
+  list.sort((a, b) => b.payout - a.payout);
+  return list;
 }
 
 export default function BetsLedger({
@@ -36,77 +109,18 @@ export default function BetsLedger({
   activePlayers,
   crashActive,
   crashMultiplier,
-  multipliers
+  multipliers,
+  roundIndex
 }: BetsLedgerProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'my' | 'top' | 'chart'>('all');
   const [topRoundMultiplier, setTopRoundMultiplier] = useState<number>(312.42);
 
-  const [topBets, setTopBets] = useState<any[]>(() => {
-    const users = [
-      'Mpesa_Guru', 'Matatu_Racer', 'CoinSlinger_KE', 'Nairobi_Hustler', 'Alpha_Bet_99',
-      'Safari_King', 'Jambo_Spins', 'Boda_Boda_Flyer', 'Oloiboni', 'Kilimanjaro_Bet',
-      'Serengeti_Gold', 'Shujaa_X', 'Wanjiku_Wins', 'Kiprotich_Speed', 'Biko_Shaker',
-      'Lucky_Otieno', 'Amani_Champs', 'Mwangi_Vip', 'Kamau_Plaza', 'Wamae_Rider',
-      'Gikomba_Trader', 'Bargain_Hunter', 'Karura_Runner', 'Heko_Spins', 'Zuri_Flyer',
-      'Pesa_Pap', 'Shilingi_Boss', 'Uhuru_Winger', 'Nyama_Choma', 'Kona_Mkali',
-      'Chunga_Sana', 'Kazi_Iendelee', 'Tausi_Queen', 'Teke_Teke', 'Simba_Nguvu',
-      'Viwambo_Spins', 'Mchezo_Sana', 'Asante_Sana', 'Rafiki_Wote', 'Karibu_Beti',
-      'Hakuna_Matata', 'Lamu_Sailor', 'Voi_Voyager', 'Mombasa_Wave', 'Nanyuki_Star',
-      'Eldoret_Turbo', 'Nakuru_Flamingo', 'Kisumu_Fish', 'Kakamega_Forest', 'Meru_Gold',
-      'Thika_Pineapple', 'Machakos_Hero', 'Kitui_Honey', 'Garissa_Sun', 'Turkana_Wind',
-      'Marsabit_Rock', 'Wajir_Camel', 'Mandera_Gate', 'Isiolo_Hub', 'Embu_Hill',
-      'Kericho_Tea', 'Bomet_Potato', 'Narok_Wheat', 'Kajiado_Beast', 'Naivasha_Breeze',
-      'Nyeri_Coffee', 'Kiambu_Real', 'Muranga_Hills', 'Laikipia_Plain', 'Samburu_Warrior',
-      'Kwale_Coconut', 'Kilifi_Cashew', 'Taita_Sisal', 'Tana_River', 'Lamu_Old_Town',
-      'Busia_Border', 'Vihiga_Hills', 'Bungoma_Sugar', 'Siaya_Sega', 'Homa_Bay',
-      'Migori_Gold', 'Kisii_Banana', 'Nyamira_High', 'Kericho_Green', 'Nandi_Bear',
-      'Uasin_Gishu', 'Elgeyo_Marakwet', 'Baringo_Lake', 'West_Pokot', 'Trans_Nzoia',
-      'Turkana_Lake', 'Samburu_Game', 'Isiolo_Camel', 'Tharaka_Nithi', 'Makueni_Fruit',
-      'Kajiado_Soda', 'Narok_Maasai', 'Bomet_Dairy', 'Kericho_Borders', 'Kisumu_Sunset',
-      'Siaya_Obama', 'Homa_Bay_Pier', 'Migori_Mine', 'Kisii_Soapstone', 'Nyamira_Tea'
-    ];
+  const [topBets, setTopBets] = useState<any[]>(() => generateRandomTopBets());
 
-    const list = [];
-    const total = 112; // Over 100 top names
-
-    const maxPayout = 1200000;
-    const minPayout = 25000;
-
-    for (let i = 0; i < total; i++) {
-      const ratio = 1 - (i / (total - 1));
-      const rawPayout = minPayout + (maxPayout - minPayout) * Math.pow(ratio, 2.2);
-      const payout = Math.round(rawPayout);
-
-      let username = users[i % users.length];
-      if (i >= users.length) {
-        username = `${username}_${i}`;
-      }
-
-      let betAmount = 1000;
-      if (payout > 800000) {
-        betAmount = 2500;
-      } else if (payout > 400000) {
-        betAmount = 1500;
-      } else if (payout > 100000) {
-        betAmount = 800;
-      } else {
-        betAmount = 500;
-      }
-
-      const multiplier = parseFloat((payout / betAmount).toFixed(2));
-      const daysAgo = Math.floor(i / 10);
-      const dateStr = daysAgo === 0 ? 'Today, ' + (12 - (i % 12)) + ':14' : `${daysAgo} days ago`;
-
-      list.push({
-        username,
-        multiplier,
-        betAmount,
-        payout,
-        date: dateStr
-      });
-    }
-    return list;
-  });
+  // Regenerate topBets when roundIndex changes to simulate completely fresh top wins for every single round
+  useEffect(() => {
+    setTopBets(generateRandomTopBets());
+  }, [roundIndex]);
 
   useEffect(() => {
     // Dynamic background score increments & live name introductions

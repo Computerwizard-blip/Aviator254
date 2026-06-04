@@ -127,7 +127,7 @@ export default function CasinoGames({
   const [copiedCode, setCopiedCode] = useState(false);
 
   const handleCopyReferralCode = () => {
-    const refCode = `REF-${userProfile.username.toUpperCase()}`;
+    const refCode = userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`;
     navigator.clipboard.writeText(refCode);
     setCopiedCode(true);
     triggerNotification(
@@ -2079,7 +2079,7 @@ export default function CasinoGames({
                     <input 
                       type="text"
                       readOnly
-                      value={`REF-${userProfile.username.toUpperCase()}`}
+                      value={userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`}
                       className="flex-1 text-center bg-[#0d071a] border border-purple-900/50 rounded-lg p-2.5 text-xs font-mono font-bold text-amber-300 pointer-events-none select-all focus:outline-none uppercase"
                     />
                     <button 

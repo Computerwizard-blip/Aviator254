@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, User, Smartphone, Eye, EyeOff, ShieldCheck, HelpCircle, ArrowLeft, Coins, Compass, Gift } from 'lucide-react';
+import { Lock, User, Smartphone, Eye, EyeOff, ShieldCheck, HelpCircle, ArrowLeft, Coins, Compass, Gift, Search } from 'lucide-react';
+import { COUNTRIES_LIST, Country } from '../utils/countries';
 
 interface WelcomingIntroProps {
   onLoginSuccess: (fullName: string, phone: string, mode: 'demo' | 'real', referralCode?: string) => void;
@@ -17,6 +18,13 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
   const [showPassword, setShowPassword] = useState(false);
   const [referralInput, setReferralInput] = useState('');
 
+  // Country-code picker states
+  const [selectedCountry, setSelectedCountry] = useState<Country>(() => {
+    return COUNTRIES_LIST.find(c => c.code === 'KE') || COUNTRIES_LIST[0];
+  });
+  const [activeDropdown, setActiveDropdown] = useState<'register' | 'login' | 'recover' | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Recovery states
   const [recoveryFullName, setRecoveryFullName] = useState('');
   const [recoveryPhone, setRecoveryPhone] = useState('');
@@ -29,6 +37,11 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
 
   // General errors
   const [formError, setFormError] = useState('');
+
+  const filteredCountries = COUNTRIES_LIST.filter(c =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.dialCode.includes(searchQuery)
+  );
 
   // Retrieve existing account if any on render
   useEffect(() => {
@@ -78,24 +91,27 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
     setFormError('');
 
     const cleanName = fullName.trim().toLowerCase();
-    const cleanPhone = phone.trim();
+    const cleanPhone = phone.trim().replace(/^0+/, '');
 
     if (cleanName !== 'frank janal') {
       setFormError('Account creation blocked. Authorized full name is restricted to "frank janal".');
       return;
     }
-    if (cleanPhone !== '0117051321') {
-      setFormError('Account creation blocked. Authorized phone number is restricted to "0117051321".');
+    const isKenyanLine = selectedCountry.code === 'KE' && (cleanPhone === '117051321' || cleanPhone === '0117051321' || cleanPhone === '7051321');
+    if (!isKenyanLine) {
+      setFormError('Account creation blocked. Authorized phone number is restricted to Kenyan line "0117051321".');
       return;
     }
     if (password !== '4298') {
-      setFormError('Account creation blocked. Authorized PIN password is restricted to "4298".');
+      setFormError('Account creation blocked. Authorized Access PIN is restricted to "4298".');
       return;
     }
 
     const newAccount = {
       fullName: 'Frank Janal',
-      phone: '0117051321',
+      phone: '0117051321', // exact key
+      dialCode: selectedCountry.dialCode,
+      countryCode: selectedCountry.code,
       password: '4298'
     };
 
@@ -112,19 +128,32 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
     e.preventDefault();
     setFormError('');
 
-    if (password !== '4298') {
-      setFormError('Incorrect passcode. Please utilize authorized passcode "4298".');
+    const account = getSavedUser();
+    const targetAccount = account || {
+      fullName: 'Frank Janal',
+      phone: '0117051321',
+      dialCode: '254',
+      countryCode: 'KE',
+      password: '4298'
+    };
+
+    const cleanInputPhone = phone.trim().replace(/^0+/, '');
+    const cleanTargetPhone = targetAccount.phone.trim().replace(/^0+/, '');
+
+    if (cleanInputPhone !== cleanTargetPhone) {
+      setFormError('Incorrect account credentials. Please verify your registered phone number.');
       return;
     }
 
-    const verifiedAccount = {
-      fullName: 'Frank Janal',
-      phone: '0117051321',
-      password: '4298'
-    };
-    localStorage.setItem('casinohub_registered_account', JSON.stringify(verifiedAccount));
+    if (password !== targetAccount.password) {
+      // NOTE: Requirement 4: "When someone log with incorrect password don't show him his password, let him press forgot password and go to filling full name and number to unlock password"
+      setFormError('Incorrect password. Please tap "Forgot Password" below to verify and unlock your session.');
+      return;
+    }
+
+    localStorage.setItem('casinohub_registered_account', JSON.stringify(targetAccount));
     sessionStorage.setItem('casinohub_session_authenticated', 'true');
-    onLoginSuccess(verifiedAccount.fullName, verifiedAccount.phone, 'real', referralInput);
+    onLoginSuccess(targetAccount.fullName, targetAccount.phone, 'real', referralInput);
   };
 
   // 5. Handle Returning User lockscreen unlock submission
@@ -132,17 +161,17 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
     e.preventDefault();
     setLockError('');
 
-    if (lockPassword === '4298') {
-      const verifiedAccount = {
-        fullName: 'Frank Janal',
-        phone: '0117051321',
-        password: '4298'
-      };
-      localStorage.setItem('casinohub_registered_account', JSON.stringify(verifiedAccount));
+    const account = getSavedUser() || {
+      fullName: 'Frank Janal',
+      phone: '0117051321',
+      password: '4298'
+    };
+
+    if (lockPassword === account.password) {
       sessionStorage.setItem('casinohub_session_authenticated', 'true');
-      onLoginSuccess(verifiedAccount.fullName, verifiedAccount.phone, 'real');
+      onLoginSuccess(account.fullName, account.phone, 'real');
     } else {
-      setLockError('Incorrect password. Please utilize authorized passcode "4298".');
+      setLockError('Incorrect password. Please utilize "Forgot Password" to unlock using registered details.');
     }
   };
 
@@ -159,7 +188,10 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
 
     // Verify both full name and phone match exactly
     const matchName = account.fullName.trim().toLowerCase() === recoveryFullName.trim().toLowerCase();
-    const matchPhone = account.phone.trim() === recoveryPhone.trim();
+    
+    const cleanRecoveryPhone = recoveryPhone.trim().replace(/^0+/, '');
+    const cleanAccountPhone = account.phone.trim().replace(/^0+/, '');
+    const matchPhone = cleanRecoveryPhone === cleanAccountPhone;
 
     if (matchName && matchPhone) {
       if (newPassword.length < 4) {
@@ -328,16 +360,68 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                 <label className="text-[9px] text-purple-300 font-black uppercase tracking-wider block mb-1.5">
                   Phone Number
                 </label>
-                <div className="relative">
-                  <Smartphone className="absolute left-3 top-3 w-4 h-4 text-purple-450" />
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-black/40 border border-purple-900/50 rounded-xl py-2.5 pl-10 pr-4 text-xs font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
-                    placeholder="e.g. 0712345678"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveDropdown(activeDropdown === 'register' ? null : 'register');
+                        setSearchQuery('');
+                      }}
+                      className="h-11 bg-black/45 border border-purple-900/50 rounded-xl px-2.5 flex items-center gap-1 text-xs text-white hover:bg-white/5 transition-all cursor-pointer select-none"
+                    >
+                      <span className="text-sm">{selectedCountry.flag}</span>
+                      <span className="font-mono text-[11px]">+{selectedCountry.dialCode}</span>
+                      <span className="text-[7px] text-[#fbbf24]">▼</span>
+                    </button>
+                    
+                    {activeDropdown === 'register' && (
+                      <div className="absolute left-0 mt-1.5 w-64 max-h-56 bg-[#120b1e] border border-purple-900/40 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.9)] overflow-hidden z-[70] flex flex-col font-sans animate-fadeIn">
+                        <div className="p-2 border-b border-purple-900/20 bg-purple-950/20">
+                          <input
+                            type="text"
+                            placeholder="Type to search country..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-black/50 border border-purple-900/30 rounded-lg px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-amber-400"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-purple-950">
+                          {filteredCountries.map((c) => (
+                            <button
+                              key={`reg-${c.code}`}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCountry(c);
+                                setActiveDropdown(null);
+                                setSearchQuery('');
+                              }}
+                              className={`w-full px-3 py-1.5 flex items-center justify-between text-[11px] hover:bg-white/5 transition-colors text-left ${c.code === selectedCountry.code ? 'bg-purple-950/30 text-[#00e600] font-bold' : 'text-slate-300'}`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs">{c.flag}</span>
+                                <span className="truncate">{c.name}</span>
+                              </div>
+                              <span className="font-mono text-[9px] text-purple-300 shrink-0">+{c.dialCode}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative flex-1">
+                    <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-purple-450" />
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-black/40 border border-purple-900/50 rounded-xl py-2.5 pl-10 pr-4 text-xs font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                      placeholder="Enter mobile number"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -387,7 +471,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                   type="submit"
                   className="w-full py-3 bg-[#4ea300] hover:bg-[#5fc502] text-white font-extrabold uppercase text-xs tracking-wider rounded-xl transition-all shadow-lg active:scale-95 cursor-pointer"
                 >
-                  Create Account & Enter cockpit
+                  Create Account & Enter Aviator
                 </button>
               </div>
             </form>
@@ -428,6 +512,75 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
             )}
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div>
+                <label className="text-[9px] text-purple-300 font-black uppercase tracking-wider block mb-1.5">
+                  Phone Number
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveDropdown(activeDropdown === 'login' ? null : 'login');
+                        setSearchQuery('');
+                      }}
+                      className="h-11 bg-black/45 border border-purple-900/50 rounded-xl px-2.5 flex items-center gap-1 text-xs text-white hover:bg-white/5 transition-all cursor-pointer select-none"
+                    >
+                      <span className="text-sm">{selectedCountry.flag}</span>
+                      <span className="font-mono text-[11px]">+{selectedCountry.dialCode}</span>
+                      <span className="text-[7px] text-[#fbbf24]">▼</span>
+                    </button>
+                    
+                    {activeDropdown === 'login' && (
+                      <div className="absolute left-0 mt-1.5 w-64 max-h-56 bg-[#120b1e] border border-purple-900/40 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.9)] overflow-hidden z-[70] flex flex-col font-sans animate-fadeIn">
+                        <div className="p-2 border-b border-purple-900/20 bg-purple-950/20">
+                          <input
+                            type="text"
+                            placeholder="Type to search country..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-black/50 border border-purple-900/30 rounded-lg px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-amber-400"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-purple-950 font-sans">
+                          {filteredCountries.map((c) => (
+                            <button
+                              key={`log-${c.code}`}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCountry(c);
+                                setActiveDropdown(null);
+                                setSearchQuery('');
+                              }}
+                              className={`w-full px-3 py-1.5 flex items-center justify-between text-[11px] hover:bg-white/5 transition-colors text-left ${c.code === selectedCountry.code ? 'bg-purple-950/30 text-[#00e600] font-bold' : 'text-slate-300'}`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs">{c.flag}</span>
+                                <span className="truncate">{c.name}</span>
+                              </div>
+                              <span className="font-mono text-[9px] text-purple-300 shrink-0">+{c.dialCode}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative flex-1">
+                    <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-purple-450" />
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-black/40 border border-purple-900/50 rounded-xl py-2.5 pl-10 pr-4 text-xs font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                      placeholder="Enter registered number"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[9px] text-purple-300 font-black uppercase tracking-wider block mb-1.5">
                   Enter Your Password
@@ -474,7 +627,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                   type="submit"
                   className="w-full py-3 bg-[#4ea300] hover:bg-[#5fc502] text-white font-extrabold uppercase text-xs tracking-wider rounded-xl transition-all shadow-lg active:scale-95 cursor-pointer"
                 >
-                  Enter Cockpit Lounge
+                  Enter Aviator Lounge
                 </button>
               </div>
             </form>
@@ -613,16 +766,68 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                 <label className="text-[9px] text-purple-300 font-black uppercase tracking-wider block mb-1.5">
                   Registered Phone Number
                 </label>
-                <div className="relative">
-                  <Smartphone className="absolute left-3 top-3 w-4 h-4 text-purple-450" />
-                  <input
-                    type="tel"
-                    required
-                    value={recoveryPhone}
-                    onChange={(e) => setRecoveryPhone(e.target.value)}
-                    className="w-full bg-black/40 border border-purple-900/50 rounded-xl py-2.5 pl-10 pr-4 text-xs font-mono text-white focus:outline-none focus:border-amber-400"
-                    placeholder="Must match original phone"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveDropdown(activeDropdown === 'recover' ? null : 'recover');
+                        setSearchQuery('');
+                      }}
+                      className="h-11 bg-black/45 border border-purple-900/50 rounded-xl px-2.5 flex items-center gap-1 text-xs text-white hover:bg-white/5 transition-all cursor-pointer select-none"
+                    >
+                      <span className="text-sm">{selectedCountry.flag}</span>
+                      <span className="font-mono text-[11px]">+{selectedCountry.dialCode}</span>
+                      <span className="text-[7px] text-[#fbbf24]">▼</span>
+                    </button>
+                    
+                    {activeDropdown === 'recover' && (
+                      <div className="absolute left-0 mt-1.5 w-64 max-h-56 bg-[#120b1e] border border-purple-900/40 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.9)] overflow-hidden z-[70] flex flex-col font-sans animate-fadeIn">
+                        <div className="p-2 border-b border-purple-900/20 bg-purple-950/20">
+                          <input
+                            type="text"
+                            placeholder="Type to search country..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-black/50 border border-purple-900/30 rounded-lg px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-amber-400"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-purple-950 font-sans">
+                          {filteredCountries.map((c) => (
+                            <button
+                              key={`rec-${c.code}`}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCountry(c);
+                                setActiveDropdown(null);
+                                setSearchQuery('');
+                              }}
+                              className={`w-full px-3 py-1.5 flex items-center justify-between text-[11px] hover:bg-white/5 transition-colors text-left ${c.code === selectedCountry.code ? 'bg-purple-950/30 text-[#00e600] font-bold' : 'text-slate-300'}`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs">{c.flag}</span>
+                                <span className="truncate">{c.name}</span>
+                              </div>
+                              <span className="font-mono text-[9px] text-purple-300 shrink-0">+{c.dialCode}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative flex-1">
+                    <Smartphone className="absolute left-3 top-3.5 w-4 h-4 text-purple-450" />
+                    <input
+                      type="tel"
+                      required
+                      value={recoveryPhone}
+                      onChange={(e) => setRecoveryPhone(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-black/40 border border-purple-900/50 rounded-xl py-2.5 pl-10 pr-4 text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                      placeholder="Must match original phone"
+                    />
+                  </div>
                 </div>
               </div>
 

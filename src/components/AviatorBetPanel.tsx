@@ -37,30 +37,105 @@ export default function AviatorBetPanel({
 }: AviatorBetPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<'bet' | 'auto'>('bet');
   const [betAmount, setBetAmount] = useState<number>(10.00);
+  const [betAmountInput, setBetAmountInput] = useState<string>("10.00");
   const [placedBetAmount, setPlacedBetAmount] = useState<number>(0);
   const [autoCashoutEnabled, setAutoCashoutEnabled] = useState<boolean>(false);
   const [autoCashoutValue, setAutoCashoutValue] = useState<number>(2.00);
   const [autoBetEnabled, setAutoBetEnabled] = useState<boolean>(false);
   const [isWaitingNextRound, setIsWaitingNextRound] = useState<boolean>(false);
+  const [panelError, setPanelError] = useState<string>('');
+
+  const isStakeLocked = isPlaced && !hasCashedOut && !isWaitingNextRound;
 
   // Quick stake buttons from photographs
   const quickStakes = [100, 200, 500, 10000];
 
+  // Sync state betAmount with text input representation
+  useEffect(() => {
+    if (document.activeElement?.id !== `bet-input-${panelId}`) {
+      setBetAmountInput(betAmount.toFixed(2));
+    }
+  }, [betAmount, panelId]);
+
   // Adjust bet bounds
   const adjustBet = (amount: number) => {
-    if (isPlaced) return; // Prevent adjustment when bet is active
+    if (isStakeLocked) return; // Prevent adjustment when bet is active
     setBetAmount(prev => {
       const next = prev + amount;
-      return next > 0 ? parseFloat(next.toFixed(2)) : 10.00;
+      const finalVal = next >= 10 ? (next <= 100000 ? parseFloat(next.toFixed(2)) : 100000.00) : 10.00;
+      setBetAmountInput(finalVal.toFixed(2));
+      setPanelError('');
+      return finalVal;
     });
   };
 
   const handleManualInput = (val: string) => {
-    if (isPlaced) return;
+    if (isStakeLocked) return;
+    setBetAmountInput(val);
+
     const num = parseFloat(val);
-    if (!isNaN(num) && num > 0) {
-      setBetAmount(parseFloat(num.toFixed(2)));
+    if (!isNaN(num)) {
+      // Limit to max 100,000 KSh
+      const capped = Math.min(100000, Math.max(0, num));
+      setBetAmount(capped);
+
+      // Instant alert when entering value below 10 KSh
+      if (capped < 10 && val.trim() !== '') {
+        setPanelError("Minimum authorized limit is 10 KSh!");
+      } else if (capped > 100000) {
+        setPanelError("Maximum authorized limit is 100,000 KSh!");
+      } else {
+        setPanelError('');
+      }
+    } else {
+      setPanelError('');
     }
+  };
+
+  const handleInputBlur = () => {
+    let num = parseFloat(betAmountInput);
+    if (isNaN(num) || num < 10) {
+      num = 10.00;
+    } else if (num > 100000) {
+      num = 100000.00;
+    }
+    const finalVal = parseFloat(num.toFixed(2));
+    setBetAmount(finalVal);
+    setBetAmountInput(finalVal.toFixed(2));
+    setPanelError('');
+  };
+
+  const handleQuickStakeClick = (stake: number) => {
+    if (isStakeLocked) return;
+    setBetAmount(stake);
+    setBetAmountInput(stake.toFixed(2));
+    setPanelError('');
+  };
+
+  const handlePlaceNextRoundBet = () => {
+    if (betAmount < 10) {
+      setPanelError("Minimum authorized limit is 10 KSh!");
+      setTimeout(() => setPanelError(''), 4000);
+      return;
+    }
+
+    if (betAmount > 100000) {
+      setPanelError("Maximum authorized limit is 100,000 KSh!");
+      setTimeout(() => setPanelError(''), 4000);
+      return;
+    }
+
+    if (balance < betAmount) {
+      setPanelError("Low Balance! Please make a deposit of KSh 100+");
+      setTimeout(() => setPanelError(''), 4000);
+      return;
+    }
+
+    setIsWaitingNextRound(true);
+    setIsPlaced(true);
+    setHasCashedOut(false);
+    setPlacedBetAmount(betAmount);
+    onBetPlaced(betAmount);
   };
 
   // Perform Bet placements
@@ -79,13 +154,26 @@ export default function AviatorBetPanel({
       return;
     }
 
+    if (betAmount < 10) {
+      setPanelError("Minimum authorized limit is 10 KSh!");
+      setTimeout(() => setPanelError(''), 4000);
+      return;
+    }
+
+    if (betAmount > 100000) {
+      setPanelError("Maximum authorized limit is 100,000 KSh!");
+      setTimeout(() => setPanelError(''), 4000);
+      return;
+    }
+
     if (balance < betAmount) {
-      alert("Insufficient KSh Balance. Clean simple reload available!");
+      setPanelError("Low Balance! Please make a deposit of KSh 100+");
+      setTimeout(() => setPanelError(''), 4000);
       return;
     }
 
     // Capture whether the flight is currently soaring or not
-    if (crashActive) {
+    if (crashActive || !countdownActive) {
       setIsWaitingNextRound(true);
     } else {
       setIsWaitingNextRound(false);
@@ -119,7 +207,7 @@ export default function AviatorBetPanel({
   // Handle auto-bet setup on countdown start
   useEffect(() => {
     if (countdownActive && autoBetEnabled && !isPlaced) {
-      if (balance >= betAmount) {
+      if (balance >= betAmount && betAmount >= 10) {
         setIsPlaced(true);
         setHasCashedOut(false);
         setPlacedBetAmount(betAmount);
@@ -127,6 +215,13 @@ export default function AviatorBetPanel({
       }
     }
   }, [countdownActive, autoBetEnabled]);
+
+  // Sync waiting next round bet into active countdown slot when lobby countdown begins
+  useEffect(() => {
+    if (countdownActive && isWaitingNextRound) {
+      setIsWaitingNextRound(false);
+    }
+  }, [countdownActive, isWaitingNextRound]);
 
   // Reset states when round ends
   useEffect(() => {
@@ -299,7 +394,7 @@ export default function AviatorBetPanel({
             {/* Minus buttons */}
             <button 
               type="button"
-              disabled={isPlaced}
+              disabled={isStakeLocked}
               onClick={() => adjustBet(-10.00)}
               className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1f2025] hover:bg-[#2b2d35] border border-[#2e313a] text-white hover:text-red-500 transition-colors disabled:opacity-30 cursor-pointer active:scale-90"
             >
@@ -309,10 +404,12 @@ export default function AviatorBetPanel({
             {/* Editable display */}
             <div className="flex-1 text-center font-mono select-all">
               <input 
+                id={`bet-input-${panelId}`}
                 type="text" 
-                value={betAmount.toFixed(2)} 
-                disabled={isPlaced}
+                value={betAmountInput} 
+                disabled={isStakeLocked}
                 onChange={(e) => handleManualInput(e.target.value)}
+                onBlur={handleInputBlur}
                 className="w-full text-center bg-transparent border-none text-white outline-none font-black text-sm select-all"
               />
             </div>
@@ -320,7 +417,7 @@ export default function AviatorBetPanel({
             {/* Plus buttons */}
             <button 
               type="button"
-              disabled={isPlaced}
+              disabled={isStakeLocked}
               onClick={() => adjustBet(10.00)}
               className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1f2025] hover:bg-[#2b2d35] border border-[#2e313a] text-white hover:text-green-500 transition-colors disabled:opacity-30 cursor-pointer active:scale-90"
             >
@@ -334,8 +431,8 @@ export default function AviatorBetPanel({
               <button 
                 key={stake}
                 type="button"
-                disabled={isPlaced}
-                onClick={() => setBetAmount(stake)}
+                disabled={isStakeLocked}
+                onClick={() => handleQuickStakeClick(stake)}
                 className={`py-1 rounded bg-[#1c1d22] hover:bg-[#282a32] border border-[#25282f] text-[10px] font-mono font-black select-none text-gray-300 hover:text-white transition-all duration-150 disabled:opacity-30 cursor-pointer active:scale-90`}
               >
                 {stake.toLocaleString()}
@@ -387,19 +484,25 @@ export default function AviatorBetPanel({
                   </span>
                 </button>
               ) : (
-                /* Already cashed out successfully */
+                /* Already cashed out successfully - allow placing bet for next flight immediately 24/7! */
                 <button 
                   type="button"
-                  disabled
-                  className="w-full h-[58px] rounded-2xl bg-[#1c1d22] border border-[#2d2e38] text-center flex flex-col justify-center items-center opacity-60 cursor-not-allowed select-none"
+                  onClick={handlePlaceNextRoundBet}
+                  className="w-full h-[58px] rounded-2xl bg-[#2cb400] hover:bg-[#34d100] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_15px_rgba(44,180,0,0.3)] border-b-2 border-[#1f8700] text-center flex flex-col justify-center items-center select-none"
                 >
-                  <span className="text-[#2cb400] text-xs font-black tracking-widest uppercase">CASHED OUT</span>
-                  <span className="text-gray-400 font-mono text-[10px] mt-0.5 font-bold">
-                    Stake secured!
+                  <span className="text-white text-[11px] tracking-widest font-black uppercase leading-none select-none">BET (NEXT ROUND)</span>
+                  <span className="text-xs font-mono font-bold tracking-tight text-emerald-300 mt-1 uppercase">Cashed Out</span>
+                  <span className="text-white text-[11px] font-mono font-bold tracking-tight select-none mt-0.5">
+                    {betAmount.toFixed(2)} KSh
                   </span>
                 </button>
               )
             )
+          )}
+          {panelError && (
+            <div className="text-[10px] text-red-400 font-bold bg-red-950/40 border border-red-500/20 text-center rounded-lg mt-1.5 py-1 animate-fadeIn">
+              ⚠️ {panelError}
+            </div>
           )}
         </div>
       </div>

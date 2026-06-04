@@ -61,9 +61,10 @@ export default function HistoryRibbon({ multipliers }: HistoryRibbonProps) {
         {/* Expand History Dropdown Trigger button */}
         <button 
           onClick={() => setExpanded(!expanded)}
-          className="p-1 px-1.5 ml-2 rounded bg-[#1f2024] hover:bg-[#2b2d35] border border-[#2e313a] text-[#8e9099] hover:text-white transition-all duration-200 flex items-center justify-center cursor-pointer text-xs shrink-0"
+          className="py-1 px-2.5 ml-2 rounded-lg bg-[#3b1220] hover:bg-[#6c223c] border border-[#ff375f]/40 hover:border-[#ff375f] text-[#ff375f] hover:text-white transition-all duration-200 flex items-center gap-1.5 cursor-pointer text-[10.5px] font-black tracking-wider uppercase shrink-0 shadow-[0_0_12px_rgba(255,55,95,0.25)] select-none"
         >
-          <History className="w-3.5 h-3.5 mr-1" />
+          <History className="w-3.5 h-3.5 animate-pulse" />
+          <span>Round History</span>
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>

@@ -70,8 +70,8 @@ export default function WalletAndTill({
   // Triggering the custom Till-Payment flow via payment checkout links
   const initiateTillDeposit = () => {
     const num = parseFloat(amountInput);
-    if (isNaN(num) || num <= 0) {
-      triggerNotification('Invalid Amount', 'Please input a valid numeric deposit amount.', 'general');
+    if (isNaN(num) || num < 100) {
+      triggerNotification('Invalid Amount', 'Minimum deposit is 100 KSh!', 'general');
       return;
     }
     if (phoneInput.trim() === '') {
@@ -117,8 +117,8 @@ export default function WalletAndTill({
 
   const handleCardDeposit = () => {
     const depAmount = parseFloat(amountInput);
-    if (isNaN(depAmount) || depAmount <= 0) {
-      triggerNotification('Invalid Amount', 'Please specify a valid KSh value.', 'general');
+    if (isNaN(depAmount) || depAmount < 100) {
+      triggerNotification('Invalid Amount', 'Minimum deposit is 100 KSh!', 'general');
       return;
     }
     
@@ -140,7 +140,10 @@ export default function WalletAndTill({
 
   const handleCryptoDeposit = () => {
     const depAmount = parseFloat(amountInput);
-    if (isNaN(depAmount) || depAmount <= 0) return;
+    if (isNaN(depAmount) || depAmount < 100) {
+      triggerNotification('Invalid Amount', 'Minimum deposit is 100 KSh!', 'general');
+      return;
+    }
 
     setWallet((prev) => ({
       ...prev,
@@ -159,8 +162,8 @@ export default function WalletAndTill({
 
   const handleWithdrawalRequest = () => {
     const amt = parseFloat(withdrawAmount);
-    if (isNaN(amt) || amt <= 0) {
-      triggerNotification('Invalid Amount', 'Please enter a valid numeric amount to withdraw.', 'general');
+    if (isNaN(amt) || amt < 100) {
+      triggerNotification('Invalid Amount', 'Minimum withdrawal is 100 KSh!', 'general');
       return;
     }
     if (wallet.mainBalance < amt) {
@@ -624,7 +627,7 @@ export default function WalletAndTill({
                   </tr>
                 </thead>
                 <tbody className="text-xs text-purple-200/80 font-mono divide-y divide-purple-900/10">
-                  {transactions.slice(0, 10).map((tx) => (
+                  {transactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-white/5 transition-colors">
                       <td className="py-3 font-semibold text-gray-400">#{tx.id}</td>
                       <td className="py-3">

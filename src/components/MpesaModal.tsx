@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { X, Smartphone, Coins, Landmark, CheckCircle2, ShieldAlert, Copy, Check, ExternalLink } from 'lucide-react';
+import { COUNTRIES_LIST, Country } from '../utils/countries';
 
 interface MpesaModalProps {
   onClose: () => void;
@@ -35,6 +36,18 @@ export default function MpesaModal({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'stk_push' | 'success'>('form');
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Country select dropdown picker states
+  const [selectedCountry, setSelectedCountry] = useState<Country>(() => {
+    return COUNTRIES_LIST.find(c => c.code === 'KE') || COUNTRIES_LIST[0];
+  });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredCountries = COUNTRIES_LIST.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.dialCode.includes(searchQuery)
+  );
 
   const handleAction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,16 +187,68 @@ export default function MpesaModal({
               {/* Enter Phone Input */}
               <div className="space-y-1">
                 <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">M-Pesa Registered Phone</label>
-                <div className="relative">
-                  <Smartphone className="w-4.5 h-4.5 absolute left-3 top-3.5 text-gray-500" />
-                  <input 
-                    type="tel"
-                    required
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-[#0e0f11] text-white rounded-lg border border-[#2c2d34] text-sm font-mono outline-none focus:border-[#00e600] focus:ring-1 focus:ring-[#00e600] transition-all"
-                    placeholder="e.g. 0712345678"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDropdownOpen(!isDropdownOpen);
+                        setSearchQuery('');
+                      }}
+                      className="h-11 bg-[#0e0f11] border border-[#2c2d34] rounded-lg px-2 flex items-center gap-1 text-xs text-white hover:bg-white/5 transition-all cursor-pointer select-none"
+                    >
+                      <span className="text-sm">{selectedCountry.flag}</span>
+                      <span className="font-mono text-[11px]">+{selectedCountry.dialCode}</span>
+                      <span className="text-[7px] text-[#fbbf24]">▼</span>
+                    </button>
+                    
+                    {isDropdownOpen && (
+                      <div className="absolute left-0 mt-1.5 w-64 max-h-56 bg-[#141518] border border-[#2b2d35] rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.9)] overflow-hidden z-[70] flex flex-col font-sans animate-fadeIn">
+                        <div className="p-2 border-b border-[#212327] bg-[#0d0e10]/40">
+                          <input
+                            type="text"
+                            placeholder="Type to search country..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-[#0e0f11] border border-[#2c2d34] rounded-lg px-2 py-1 text-[11px] text-slate-200 outline-none focus:border-[#00e600]"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                          {filteredCountries.map((c) => (
+                            <button
+                              key={`mpesa-${c.code}`}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCountry(c);
+                                setIsDropdownOpen(false);
+                                setSearchQuery('');
+                              }}
+                              className={`w-full px-3 py-1.5 flex items-center justify-between text-[11px] hover:bg-white/5 transition-colors text-left ${c.code === selectedCountry.code ? 'bg-[#1b1c21] text-[#00e600] font-bold' : 'text-slate-300'}`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs">{c.flag}</span>
+                                <span className="truncate">{c.name}</span>
+                              </div>
+                              <span className="font-mono text-[9px] text-gray-500 shrink-0">+{c.dialCode}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative flex-grow">
+                    <Smartphone className="w-4 h-4 absolute left-3 top-3.5 text-gray-500" />
+                    <input 
+                      type="tel"
+                      required
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                      className="w-full pl-9 pr-3 py-3 bg-[#0e0f11] text-white rounded-lg border border-[#2c2d34] text-xs font-mono outline-none focus:border-[#00e600] focus:ring-1 focus:ring-[#00e600] transition-all"
+                      placeholder="Enter mobile number"
+                    />
+                  </div>
                 </div>
               </div>
 

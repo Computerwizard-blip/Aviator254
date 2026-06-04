@@ -10,6 +10,7 @@ import AviatorGameViewport from './components/AviatorGameViewport';
 import AviatorBetPanel from './components/AviatorBetPanel';
 import BetsLedger from './components/BetsLedger';
 import MpesaModal from './components/MpesaModal';
+import DownloadAppModal from './components/DownloadAppModal';
 import { audioEngine } from './utils/audio';
 import ResponsibleGamingModal from './components/ResponsibleGamingModal';
 import { AnimatePresence, motion } from 'motion/react';
@@ -194,7 +195,8 @@ export default function App() {
     currency: 'KSh',
     vipLevel: 'Silver',
     vipPoints: 1240,
-    joinedDate: '2026-01-10'
+    joinedDate: '2026-01-10',
+    referralCode: 'REF-FRANCYPENDY-5678'
   });
 
   const [jackpotPool, setJackpotPool] = useState<JackpotPool>({
@@ -204,7 +206,24 @@ export default function App() {
     mini: 12400.50
   });
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactionsState] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem('casinohub_transactions');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const setTransactions = (val: React.SetStateAction<Transaction[]>) => {
+    setTransactionsState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      localStorage.setItem('casinohub_transactions', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const addTransaction = (tx: Omit<Transaction, 'id' | 'timestamp' | 'status'> & { status?: 'SUCCESS' | 'FAILED' | 'PENDING' }) => {
     const newTx: Transaction = {
       ...tx,
@@ -237,7 +256,7 @@ export default function App() {
     {
       id: 'notif-01',
       title: 'Welcome to CasinoHub 🎰',
-      message: 'Take off inside our high-performance Aviator Cockpit or explore dozens of slots and table games!',
+      message: 'Take off inside our high-performance Aviator or explore dozens of slots and table games!',
       type: 'general',
       channel: 'in_app',
       timestamp: 'Just now',
@@ -270,11 +289,17 @@ export default function App() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
+          const cleanName = (parsed.fullName || 'Frank Janal').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const cleanPhone = (parsed.phone || '0117051321').trim().replace(/[^0-9]/g, '');
+          const lastFour = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : '1321';
+          const generatedCode = `REF-${cleanName}-${lastFour}`;
+
           setUserProfile(prev => ({
             ...prev,
             username: parsed.fullName.toLowerCase().replace(/\s+/g, '_'),
             phone: parsed.phone,
-            fullName: parsed.fullName
+            fullName: parsed.fullName,
+            referralCode: generatedCode
           }));
           setAuthSessionMode('real');
           triggerNotification(
@@ -297,7 +322,8 @@ export default function App() {
           ...prev,
           username: 'frank_janal',
           phone: '0117051321',
-          fullName: 'Frank Janal'
+          fullName: 'Frank Janal',
+          referralCode: 'REF-FRANKJANAL-1321'
         }));
         setAuthSessionMode('real');
         triggerNotification(
@@ -312,11 +338,12 @@ export default function App() {
       setUserProfile(prev => ({
         ...prev,
         username: 'demo_player',
-        fullName: 'Demo Player'
+        fullName: 'Demo Player',
+        referralCode: 'REF-DEMOPLAYER-0000'
       }));
       triggerNotification(
         '🟣 DEMO PLAY RUNNING',
-        'Switched to Demo Cockpit. Unlimited practice mode is active!',
+        'Switched to Demo Aviator. Unlimited practice mode is active!',
         'general'
       );
     }
@@ -456,8 +483,8 @@ export default function App() {
 
   // Simulated live lobby bettors
   const [activePlayers, setActivePlayers] = useState<BetLogItem[]>([]);
-  const [onlinePlayersCount, setOnlinePlayersCount] = useState<number>(64);
-  const [startingPlayers, setStartingPlayers] = useState<number>(1850);
+  const [onlinePlayersCount, setOnlinePlayersCount] = useState<number>(() => Math.floor(Math.random() * (2500 - 1500 + 1)) + 1500);
+  const [startingPlayers, setStartingPlayers] = useState<number>(() => Math.floor(Math.random() * (2500 - 1500 + 1)) + 1500);
   const [finalMinPlayers, setFinalMinPlayers] = useState<number>(85);
   const [bigWinOverlay, setBigWinOverlay] = useState<{ multiplier: number; amount: number } | null>(null);
 
@@ -474,6 +501,7 @@ export default function App() {
   // M-Pesa overlay indicator State
   const [isDepositOpen, setIsDepositOpen] = useState<boolean>(false);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [isDownloadAppOpen, setIsDownloadAppOpen] = useState<boolean>(false);
 
   const handleSignOut = () => {
     sessionStorage.removeItem('casinohub_session_authenticated');
@@ -508,10 +536,10 @@ export default function App() {
 
   // Helper: setup simulated other players bets at start of lobby
   const generateSimulatedLobbyBettors = (roundIndex: number) => {
-    const rand = seededRandom(roundIndex + 12345);
+    const rand = Math.random;
     
-    // a maximum of 1000 to 2000 in starting (more than 1000 but less than 2000)
-    const maxStart = Math.floor(rand() * (1999 - 1001 + 1)) + 1001;
+    // a maximum of 1500 to 2500 in starting
+    const maxStart = Math.floor(rand() * (2500 - 1500 + 1)) + 1500;
     // a minimum of 63 to 135
     const minFinal = Math.floor(rand() * (135 - 63 + 1)) + 63;
     
@@ -618,7 +646,7 @@ export default function App() {
   useEffect(() => {
     const list: number[] = [];
     const baseIndex = Math.floor(Date.now() / 42000);
-    for (let i = 1; i <= 15; i++) {
+    for (let i = 1; i <= 30; i++) {
       list.push(getRoundLimit(baseIndex - i));
     }
     setHistoryList(list);
@@ -712,7 +740,7 @@ export default function App() {
           setHistoryList(prev => {
             if (prev.includes(limit)) return prev; // Avoid duplicating if already added
             const nextList = [limit, ...prev];
-            return nextList.slice(0, 15);
+            return nextList.slice(0, 30);
           });
 
           setCurrentPhase('crashed');
@@ -803,6 +831,19 @@ export default function App() {
     });
   };
 
+  // App Installer Reward Bonus Credit
+  const handleAppInstallBonus = (cashAmount: number) => {
+    setBalance(prev => parseFloat((prev + cashAmount).toFixed(2)));
+    addTransaction({
+      amount: cashAmount,
+      type: 'bonus_credit',
+      currency: 'KSh',
+      method: 'CasinoHub Mobile App',
+      referenceCode: 'BONUS-APP-1K',
+      status: 'SUCCESS'
+    });
+  };
+
   const handleWithdrawSuccess = (cashAmount: number) => {
     setBalance(prev => parseFloat((prev - cashAmount).toFixed(2)));
   };
@@ -836,7 +877,7 @@ export default function App() {
     const handleClearSelfExclusion = () => {
       setSelfExcludedUntil(null);
       localStorage.removeItem('aviator_self_excluded_until');
-      alert("Sandbox Mode: Self-exclusion cleared! Welcome back to the cockpit.");
+      alert("Sandbox Mode: Self-exclusion cleared! Welcome back to the Aviator.");
     };
 
     return (
@@ -854,7 +895,7 @@ export default function App() {
           </div>
 
           <p className="text-[11px] text-gray-400 font-medium leading-relaxed">
-            As requested under our **Responsible Gaming** policy, your CasinoHub / Aviator cockpit access is locked. Use this pause to step away from active betting.
+            As requested under our **Responsible Gaming** policy, your CasinoHub / Aviator access is locked. Use this pause to step away from active betting.
           </p>
 
           <div className="bg-[#0e0f11] p-4 rounded-xl border border-[#212328] space-y-1">
@@ -942,11 +983,17 @@ export default function App() {
           }
 
           if (mode === 'real') {
+            const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const cleanPhone = phoneStr.trim().replace(/[^0-9]/g, '');
+            const lastFour = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : '7777';
+            const generatedCode = `REF-${cleanName}-${lastFour}`;
+
             setUserProfile(prev => ({
               ...prev,
               username: name.toLowerCase().replace(/\s+/g, '_'),
               phone: phoneStr,
-              fullName: name
+              fullName: name,
+              referralCode: generatedCode
             }));
             triggerNotification(
               '🟢 REAL PLAY ACTIVE',
@@ -957,11 +1004,12 @@ export default function App() {
             setUserProfile(prev => ({
               ...prev,
               username: 'demo_player',
-              fullName: 'Demo Player'
+              fullName: 'Demo Player',
+              referralCode: 'REF-DEMOPLAYER-0000'
             }));
             triggerNotification(
               '🟣 DEMO PLAY RUNNING',
-              'Enjoy free unlimited wagers in cockpit demo mode!',
+              'Enjoy free unlimited wagers in Aviator demo mode!',
               'general'
             );
           }
@@ -1017,6 +1065,7 @@ export default function App() {
           onToggleAuthSessionMode={handleToggleAuthSessionMode}
           userProfile={userProfile}
           onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenDownloadApp={() => setIsDownloadAppOpen(true)}
         />
 
         {/* Alert Notifications Center pop-down drawer overlays */}
@@ -1037,7 +1086,7 @@ export default function App() {
               className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${currentView === 'aviator' ? 'bg-[#e21515] text-[#fff] shadow-[0_0_12px_rgba(226,21,21,0.3)]' : 'bg-black/15 text-[#9b9da4] hover:text-[#d1d2d6]'}`}
             >
               <span>🚀</span>
-              <span className="uppercase">Aviator Cockpit</span>
+              <span className="uppercase">Aviator</span>
             </button>
             <button
               onClick={() => { setView('lobby'); setIsNotificationsOpen(false); }}
@@ -1049,6 +1098,15 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setIsDepositOpen(true)}
+              className="px-3 py-1.5 rounded bg-[#4ea300] hover:bg-[#5fc502] text-white font-black uppercase text-[10px] tracking-wider cursor-pointer flex items-center gap-1 shadow-[0_0_12px_rgba(78,163,0,0.3)] hover:scale-[1.02] active:scale-95 transition-all duration-100"
+              title="M-Pesa Express Deposit"
+            >
+              <span>💳</span>
+              <span>Deposit</span>
+            </button>
+
             <button
               onClick={() => {
                 sessionStorage.removeItem('casinohub_session_authenticated');
@@ -1137,6 +1195,7 @@ export default function App() {
                 crashActive={crashActive}
                 crashMultiplier={crashMultiplier}
                 multipliers={historyList}
+                roundIndex={roundIndex}
               />
             </div>
           </>
@@ -1195,6 +1254,14 @@ export default function App() {
             onToggleAuthMode={handleToggleAuthSessionMode}
           />
         )}
+
+        {/* Interactive Download Mobile Client package Overlay */}
+        <DownloadAppModal 
+          isOpen={isDownloadAppOpen}
+          onClose={() => setIsDownloadAppOpen(false)}
+          onCreditWallet={handleAppInstallBonus}
+          triggerNotification={triggerNotification}
+        />
 
         {/* Responsible Gaming & Player Safety Settings Panel */}
         {isResponsibleGamingOpen && (

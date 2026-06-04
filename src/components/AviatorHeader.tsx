@@ -4,8 +4,10 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Menu, ArrowLeft, PlusCircle, Volume2, VolumeX, ShieldAlert, Bell, Gamepad2, User } from 'lucide-react';
+import { Menu, ArrowLeft, Volume2, VolumeX, ShieldAlert, Bell, Gamepad2, User, Download } from 'lucide-react';
 import { UserProfile } from '../types';
+// @ts-ignore
+import appLogo from '../assets/images/aviator_app_logo_1780602471546.png';
 
 interface AviatorHeaderProps {
   balance: number;
@@ -21,6 +23,7 @@ interface AviatorHeaderProps {
   onToggleAuthSessionMode?: () => void;
   userProfile?: UserProfile;
   onOpenProfile: () => void;
+  onOpenDownloadApp?: () => void;
 }
 
 export default function AviatorHeader({ 
@@ -36,7 +39,8 @@ export default function AviatorHeader({
   authSessionMode,
   onToggleAuthSessionMode,
   userProfile,
-  onOpenProfile
+  onOpenProfile,
+  onOpenDownloadApp
 }: AviatorHeaderProps) {
   const [exitConfirm, setExitConfirm] = useState(false);
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -57,7 +61,7 @@ export default function AviatorHeader({
   };
 
   return (
-    <header className="h-14 bg-[#141518] px-4 flex items-center justify-between border-b border-[#212327] select-none shrink-0">
+    <header className="h-14 bg-[#141518] px-4 flex items-center justify-between border-b border-[#212327] select-none shrink-0 border-x border-[#212327]">
       {/* Target Action - Navigation */}
       {currentView !== 'lobby' ? (
         <button 
@@ -80,15 +84,13 @@ export default function AviatorHeader({
       )}
 
       {/* Styled Brand Name Logo (Slanted Red or Purple Typography) */}
-      <div className="flex items-center gap-1 border-x border-[#212327] px-4 self-stretch cursor-pointer group select-none" onClick={() => setView?.('lobby')}>
+      <div className="flex items-center gap-2 border-x border-[#212327]/50 px-3 self-stretch cursor-pointer group select-none" onClick={() => setView?.('lobby')}>
+        <div className="w-6.5 h-6.5 rounded-lg bg-black/50 border border-red-500/30 p-0.5 flex items-center justify-center shrink-0">
+          <img src={appLogo} alt="App Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+        </div>
         <span className={`text-sm sm:text-base font-black italic tracking-wide uppercase transition-transform duration-300 ${currentView === 'aviator' ? 'text-[#e21515] drop-shadow-[0_2px_4px_rgba(226,21,21,0.25)]' : 'text-purple-400 drop-shadow-[0_2px_4px_rgba(168,85,247,0.25)]'}`}>
           {currentView === 'aviator' ? 'Aviator' : 'CasinoHub'}
         </span>
-        {currentView === 'aviator' ? (
-          <span className="text-xs text-red-500 animate-spin shrink-0">⚙️</span>
-        ) : (
-          <span className="text-[10px] text-purple-400 animate-pulse">♣️</span>
-        )}
       </div>
 
       {/* KES Wallet Counter, Audio Volume, Notification alert and Safety Controls */}
@@ -121,15 +123,20 @@ export default function AviatorHeader({
           <span className="text-[9px] font-bold text-gray-400 font-mono">KSh</span>
         </div>
 
-        {/* Highly prominent green Deposit button */}
-        <button
-          onClick={onOpenDeposit}
-          className="bg-[#00e600] hover:bg-[#1bf31b] active:bg-[#00cc00] text-black text-xs font-black px-3 py-1.5 sm:px-4 sm:py-1.5 rounded-lg uppercase tracking-wider transition-all scale-100 hover:scale-[1.03] active:scale-95 cursor-pointer flex items-center gap-1 shrink-0 font-sans shadow-[0_0_15px_rgba(0,230,0,0.3)] border border-[#00e600]"
-          title="Deposit money now"
-        >
-          <PlusCircle className="w-3.5 h-3.5 text-black" />
-          <span>DEPOSIT</span>
-        </button>
+
+
+        {/* Glowing Download App Button */}
+        {onOpenDownloadApp && (
+          <button
+            onClick={onOpenDownloadApp}
+            className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-red-500/20 bg-[#251012] hover:bg-[#3d1317] text-[#ff375f] hover:text-red-300 transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-wider cursor-pointer active:scale-95 duration-150 shadow-[0_0_10px_rgba(239,68,68,0.15)] hover:shadow-[0_0_14px_rgba(239,68,68,0.3)] select-none shrink-0"
+            title="Download the official iOS & Android App to receive KSh 1,000 Free Credits"
+          >
+            <Download className="w-3.5 h-3.5 text-[#ff375f] animate-bounce shrink-0" />
+            <span className="hidden xs:inline">Install App</span>
+            <span className="leading-none scale-90 bg-[#ff375f] text-white text-[7.5px] px-1 py-0.5 rounded-full animate-pulse font-mono font-black">+1K</span>
+          </button>
+        )}
 
         {/* Dynamic global Notification bells */}
         <div className="relative">

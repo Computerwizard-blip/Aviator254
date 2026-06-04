@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { X, User, Crown, Phone, Calendar, Copy, LogOut, Award, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, User, Crown, Phone, Calendar, Copy, LogOut, Award, Check, AlertTriangle } from 'lucide-react';
 import { UserProfile, Wallet } from '../types';
 
 interface ProfilePanelProps {
@@ -27,11 +27,21 @@ export default function ProfilePanel({
   triggerNotification
 }: ProfilePanelProps) {
   const [copiedCode, setCopiedCode] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const confirmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Reset confirmation state when drawer opens or closes
+  useEffect(() => {
+    setConfirmSignOut(false);
+    return () => {
+      if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const currentBalance = authSessionMode === 'real' ? wallet.realBalance : wallet.demoBalance;
-  const referralCode = `REF-${userProfile.username.toUpperCase()}`;
+  const referralCode = userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`;
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(referralCode);
@@ -42,6 +52,25 @@ export default function ProfilePanel({
       'general'
     );
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleSignOutClick = () => {
+    if (!confirmSignOut) {
+      setConfirmSignOut(true);
+      triggerNotification(
+        '⚠️ Sign Out Pending',
+        'Please tap "CLICK AGAIN TO SIGN OUT" within 4 seconds to secure log out.',
+        'general'
+      );
+      if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+      confirmTimeoutRef.current = setTimeout(() => {
+        setConfirmSignOut(false);
+      }, 4000);
+    } else {
+      if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+      setConfirmSignOut(false);
+      onSignOut();
+    }
   };
 
   return (
@@ -188,11 +217,24 @@ export default function ProfilePanel({
         {/* Footer Area with standard signout */}
         <div className="p-6 bg-black/40 border-t border-[#212327]">
           <button
-            onClick={onSignOut}
-            className="w-full py-3.5 bg-[#e21515] hover:bg-[#ff2020] active:scale-95 text-white font-black uppercase text-xs tracking-widest rounded-xl transition-all cursor-pointer shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
+            onClick={handleSignOutClick}
+            className={`w-full py-3.5 active:scale-95 text-white font-black uppercase text-xs tracking-widest rounded-xl transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2 ${
+              confirmSignOut
+                ? 'bg-amber-500 hover:bg-amber-450 text-black shadow-amber-500/20 shadow-xl border-2 border-amber-600/50 animate-pulse'
+                : 'bg-[#e21515] hover:bg-[#ff2020] shadow-red-500/10'
+            }`}
           >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out Profile</span>
+            {confirmSignOut ? (
+              <>
+                <AlertTriangle className="w-4 h-4 text-black" />
+                <span>Click Again to Sign Out</span>
+              </>
+            ) : (
+              <>
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out Profile</span>
+              </>
+            )}
           </button>
           <div className="text-[9px] text-gray-600 text-center mt-3 font-mono">
             Secure Session Authentication verified through CasinoHub Link
