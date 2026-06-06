@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Clock, History, Trophy, TrendingUp, Check } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { UserProfile } from '../types';
 
 interface BetLogItem {
   id: string;
@@ -24,12 +25,14 @@ interface BetsLedgerProps {
     payout?: number;
     time: string;
     status: 'WON' | 'LOST' | 'ACTIVE';
+    mode?: 'demo' | 'real';
   }[];
   activePlayers: BetLogItem[];
   crashActive: boolean;
   crashMultiplier: number;
   multipliers: number[];
   roundIndex?: number;
+  userProfile?: UserProfile;
 }
 
 const USERS_LIST = [
@@ -110,10 +113,55 @@ export default function BetsLedger({
   crashActive,
   crashMultiplier,
   multipliers,
-  roundIndex
+  roundIndex,
+  userProfile
 }: BetsLedgerProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'my' | 'top' | 'chart'>('all');
   const [topRoundMultiplier, setTopRoundMultiplier] = useState<number>(312.42);
+
+  const getUserVipLevel = (username: string): 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Elite' => {
+    if (userProfile && (username === userProfile.username || username === 'demo_player' || username === 'francypendy')) {
+      return userProfile.vipLevel;
+    }
+    const code = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    if (code % 23 === 0) return 'Elite';
+    if (code % 17 === 0) return 'Diamond';
+    if (code % 11 === 0) return 'Platinum';
+    if (code % 7 === 0) return 'Gold';
+    if (code % 4 === 0) return 'Silver';
+    return 'Bronze';
+  };
+
+  const renderVipBadge = (username: string) => {
+    const level = getUserVipLevel(username);
+    if (level === 'Bronze') return null;
+    
+    let badgeBg = 'bg-slate-800 text-slate-350 border-slate-700/50';
+    let label = '★ SLV';
+    
+    if (level === 'Silver') {
+      badgeBg = 'bg-gray-800/80 text-gray-300 border-gray-750/40 text-[7px]';
+      label = '★ SLV';
+    } else if (level === 'Gold') {
+      badgeBg = 'bg-[#1b1509] text-amber-400 border-amber-500/20 text-[7px]';
+      label = '★ GLD';
+    } else if (level === 'Platinum') {
+      badgeBg = 'bg-[#09151e] text-blue-400 border-blue-500/20 text-[7px]';
+      label = '★ PLT';
+    } else if (level === 'Diamond') {
+      badgeBg = 'bg-[#091c1e] text-cyan-300 border-cyan-500/20 text-[7px]';
+      label = '✦ DIA';
+    } else if (level === 'Elite') {
+      badgeBg = 'bg-[#21090c] text-red-400 border-red-500/20 text-[7.5px] animate-pulse';
+      label = '✦ ELT';
+    }
+    
+    return (
+      <span className={`font-black px-1 py-0.5 rounded border leading-none scale-90 origin-left inline-block select-none font-mono ${badgeBg}`}>
+        {label}
+      </span>
+    );
+  };
 
   const [topBets, setTopBets] = useState<any[]>(() => generateRandomTopBets());
 
@@ -262,11 +310,12 @@ export default function BetsLedger({
                     className={`flex items-center justify-between rounded-lg p-2 text-xs font-mono transition-all border ${player.cashedOut ? 'bg-[#0f210e]/40 border-[#1a3818]/60' : 'bg-[#191a1e] border-transparent'}`}
                   >
                     {/* User display */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-5 h-5 rounded-full bg-red-950 flex items-center justify-center text-[8px] font-black font-sans text-red-500 uppercase border border-red-950/20 shrink-0">
                         {player.username.substring(0, 2)}
                       </div>
                       <span className="text-[#b5b7c0] text-[11px] font-semibold truncate max-w-[90px]">{player.username}</span>
+                      {renderVipBadge(player.username)}
                     </div>
 
                     {/* Bettor statistics details */}
@@ -371,9 +420,10 @@ export default function BetsLedger({
                   key={idx}
                   className="flex items-center justify-between bg-[#191a1e] hover:bg-[#202248]/30 rounded-lg p-2.5 text-xs font-mono border border-transparent"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span className="text-amber-400 font-bold font-sans text-xs">#{idx + 1}</span>
                     <span className="text-white font-semibold truncate max-w-[100px]">{item.username}</span>
+                    {renderVipBadge(item.username)}
                   </div>
 
                   <div className="flex items-center gap-14 text-right">

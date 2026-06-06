@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Menu, ArrowLeft, Volume2, VolumeX, ShieldAlert, Bell, Gamepad2, User, Download } from 'lucide-react';
+import { Menu, ArrowLeft, Volume2, VolumeX, ShieldAlert, Bell, Gamepad2, User, Download, Settings } from 'lucide-react';
 import { UserProfile } from '../types';
 // @ts-ignore
 import appLogo from '../assets/images/aviator_app_logo_1780602471546.png';
@@ -24,6 +24,7 @@ interface AviatorHeaderProps {
   userProfile?: UserProfile;
   onOpenProfile: () => void;
   onOpenDownloadApp?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export default function AviatorHeader({ 
@@ -40,7 +41,8 @@ export default function AviatorHeader({
   onToggleAuthSessionMode,
   userProfile,
   onOpenProfile,
-  onOpenDownloadApp
+  onOpenDownloadApp,
+  onOpenSettings
 }: AviatorHeaderProps) {
   const [exitConfirm, setExitConfirm] = useState(false);
   const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,6 +115,7 @@ export default function AviatorHeader({
 
         {/* Clickable Wallet display - triggers MPesa Overlay */}
         <div 
+          id="deposit-header-btn"
           onClick={onOpenDeposit}
           className="flex items-center gap-1 bg-[#0e160e] border border-[#2b5c2a] px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg cursor-pointer hover:bg-[#1a2d19] transition-all select-none active:scale-95"
           title="M-Pesa cash transaction till deposit"
@@ -172,14 +175,30 @@ export default function AviatorHeader({
           <Menu className="w-4 h-4" />
         </button>
 
+        {/* Settings button */}
+        {onOpenSettings && (
+          <button 
+            id="settings-header-btn"
+            onClick={onOpenSettings}
+            className="w-7.5 h-7.5 flex items-center justify-center text-[#9b9da4] hover:text-white bg-black/45 hover:bg-[#25282e] border border-[#25282e] rounded transition-all active:scale-[0.88] cursor-pointer"
+            title="Adjust Account Settings (Sound, Full name, Photo)"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         {/* Real Aviator-Like User Profile Badge */}
         {userProfile && (
           <button
             onClick={onOpenProfile}
-            className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#e21515] to-[#ff4747] border-2 border-red-500/50 hover:border-red-400 flex items-center justify-center text-white text-[10px] font-black tracking-tight cursor-pointer shadow-[0_0_12px_rgba(226,21,21,0.3)] hover:shadow-[0_0_16px_rgba(226,21,21,0.5)] transition-all active:scale-[0.88] uppercase shrink-0 select-none"
+            className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#e21515] to-[#ff4747] border-2 border-red-500/50 hover:border-red-400 flex items-center justify-center text-white text-[10px] font-black tracking-tight cursor-pointer shadow-[0_0_12px_rgba(226,21,21,0.3)] hover:shadow-[0_0_16px_rgba(226,21,21,0.5)] transition-all active:scale-[0.88] uppercase shrink-0 select-none overflow-hidden"
             title="Open Account Profile Drawer"
           >
-            {userProfile.avatar || userProfile.fullName?.substring(0, 2).toUpperCase() || userProfile.username.substring(0, 2).toUpperCase()}
+            {userProfile.avatar && (userProfile.avatar.startsWith('data:image/') || userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
+              <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+            ) : (
+              userProfile.avatar || userProfile.fullName?.substring(0, 2).toUpperCase() || userProfile.username.substring(0, 2).toUpperCase()
+            )}
           </button>
         )}
       </div>

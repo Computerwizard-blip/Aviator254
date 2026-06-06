@@ -48,6 +48,7 @@ interface CasinoGamesProps {
   };
   userProfile?: UserProfile;
   authSessionMode?: 'demo' | 'real' | null;
+  setUserProfile?: React.Dispatch<React.SetStateAction<UserProfile>>;
 }
 
 export const LISTED_GAMES: GameItem[] = [
@@ -103,7 +104,8 @@ export default function CasinoGames({
     vipPoints: 1240,
     joinedDate: '2026-01-10'
   },
-  authSessionMode = 'real'
+  authSessionMode = 'real',
+  setUserProfile
 }: CasinoGamesProps) {
   const [selectedGame, setSelectedGame] = useState<GameItem | null>(null);
   const [betAmount, setBetAmount] = useState<number>(10);
@@ -136,6 +138,88 @@ export default function CasinoGames({
       'general'
     );
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  // Game of the week local interactive states
+  const [showGotwPromoModal, setShowGotwPromoModal] = useState<boolean>(false);
+  const [nextWeekVotedId, setNextWeekVotedId] = useState<string | null>(() => {
+    return localStorage.getItem('casinohub_gotw_voted_id');
+  });
+  const [nextWeekVotes, setNextWeekVotes] = useState<{ [key: string]: number }>(() => {
+    const saved = localStorage.getItem('casinohub_gotw_votes');
+    if (saved) return JSON.parse(saved);
+    return {
+      'slot-video': 542,
+      'live-roulette': 319,
+      'instant-mines': 612
+    };
+  });
+  const [gotwTimeLeft, setGotwTimeLeft] = useState<string>('5d 14h 22m');
+
+  // Dynamic countdown calculations
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      // Calculate target: coming Sunday at 23:59:59
+      const target = new Date();
+      target.setDate(now.getDate() + (7 - now.getDay()) % 7);
+      target.setHours(23, 59, 59, 999);
+      if (target.getTime() <= now.getTime()) {
+        target.setDate(target.getDate() + 7);
+      }
+      const diff = target.getTime() - now.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      setGotwTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Dynamically calculate VIP Club Coffer amount based on session mode and transaction history
+  let totalDeposited = 0;
+  if (authSessionMode === 'real') {
+    try {
+      const storedTx = localStorage.getItem('casinohub_transactions');
+      if (storedTx) {
+        const parsed = JSON.parse(storedTx);
+        if (Array.isArray(parsed)) {
+          totalDeposited = parsed
+            .filter((t: any) => t.type === 'deposit')
+            .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+        }
+      }
+    } catch (e) {}
+  }
+  const dynamicVipBonusAmount = authSessionMode === 'real' 
+    ? parseFloat((totalDeposited * 0.05).toFixed(2)) 
+    : 100;
+
+  const handleVoteForNextWeek = (gameId: string) => {
+    if (nextWeekVotedId) {
+      triggerNotification('Already Voted', 'You have already voted for next week\'s featured Game of the Week!', 'general');
+      return;
+    }
+    setNextWeekVotedId(gameId);
+    localStorage.setItem('casinohub_gotw_voted_id', gameId);
+    
+    const updatedVotes = {
+      ...nextWeekVotes,
+      [gameId]: (nextWeekVotes[gameId] || 0) + 1
+    };
+    setNextWeekVotes(updatedVotes);
+    localStorage.setItem('casinohub_gotw_votes', JSON.stringify(updatedVotes));
+
+    const votedGameName = LISTED_GAMES.find(g => g.id === gameId)?.title || 'Selected Game';
+    triggerNotification(
+      '🗳️ Vote Registered!',
+      `Thank you for voting! "${votedGameName}" is now in the lead for next week's Game of the Week!`,
+      'bonus'
+    );
   };
 
   const handleSimulateReferredDeposit = () => {
@@ -241,17 +325,25 @@ export default function CasinoGames({
   const handleClaimVipBonus = () => {
     if (vipBonusCooldown > 0) return;
 
-    // Loyalty Bonus configuration
-    const bonusMap: Record<UserProfile['vipLevel'], number> = {
-      Bronze: 50,
-      Silver: 150,
-      Gold: 500,
-      Platinum: 1500,
-      Diamond: 5000,
-      Elite: 15000
-    };
+    let reward = 100;
+    let localTotalDeposited = 0;
 
-    const reward = bonusMap[userProfile.vipLevel] || 50;
+    if (authSessionMode === 'real') {
+      try {
+        const storedTx = localStorage.getItem('casinohub_transactions');
+        if (storedTx) {
+          const parsed = JSON.parse(storedTx);
+          if (Array.isArray(parsed)) {
+            localTotalDeposited = parsed
+              .filter((t: any) => t.type === 'deposit')
+              .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+          }
+        }
+      } catch (e) {}
+      reward = parseFloat((localTotalDeposited * 0.05).toFixed(2));
+    } else {
+      reward = 100;
+    }
 
     // Credit corresponding balance
     setWallet(w => {
@@ -277,13 +369,17 @@ export default function CasinoGames({
       type: 'bonus_credit',
       amount: reward,
       currency: 'KSh',
-      method: `VIP Loyalty Claim: ${userProfile.vipLevel} Status`,
+      method: authSessionMode === 'real'
+        ? `VIP Coffer: 5% Deposit Commission`
+        : `VIP Coffer: Demo Practice Bonus`,
     });
 
     // Notify player elegantly
     triggerNotification(
       '🏆 VIP Loyalty Claimed!',
-      `Successfully unlocked KSh ${reward.toLocaleString()} VIP Loyalty Reward based on your ${userProfile.vipLevel} Level!`,
+      authSessionMode === 'real'
+        ? `Successfully unlocked KSh ${reward.toLocaleString()} (5% Coffer commission from KSh ${localTotalDeposited.toLocaleString()} total deposits)!`
+        : `Successfully unlocked KSh ${reward.toLocaleString()} Demo Practice Bonus!`,
       'vip'
     );
 
@@ -458,6 +554,55 @@ export default function CasinoGames({
       method: 'Placed Stake',
       game: gameTitle
     });
+
+    // Game of the week loyalty point booster awards
+    if (setUserProfile) {
+      const gotw = gameOfTheWeek;
+      const gotwGame = gotw ? LISTED_GAMES.find(g => g.id === gotw.gameId) : null;
+      const isGOTW = gotwGame && (
+        (selectedGame && selectedGame.id === gotw.gameId) ||
+        gameTitle.toLowerCase().includes(gotwGame.title.toLowerCase())
+      );
+
+      const basePoints = Math.max(1, Math.round(amount * 0.1));
+      const finalPoints = isGOTW ? basePoints * 3 : basePoints;
+
+      setUserProfile(prev => {
+        const nextPoints = prev.vipPoints + finalPoints;
+        // See if VIP tier should level up!
+        let nextTier = prev.vipLevel;
+        if (nextPoints >= 10000) nextTier = 'Elite';
+        else if (nextPoints >= 5000) nextTier = 'Diamond';
+        else if (nextPoints >= 3000) nextTier = 'Platinum';
+        else if (nextPoints >= 1500) nextTier = 'Gold';
+        else if (nextPoints >= 500) nextTier = 'Silver';
+
+        if (nextTier !== prev.vipLevel) {
+          setTimeout(() => {
+            triggerNotification(
+              '🎉 VIP LEVEL UP!',
+              `Congratulations! You have been promoted to ${nextTier} tier! Keep playing to unlock bigger cash rewards!`,
+              'vip'
+            );
+          }, 600);
+        }
+
+        return {
+          ...prev,
+          vipPoints: nextPoints,
+          vipLevel: nextTier
+        };
+      });
+
+      if (isGOTW) {
+        triggerNotification(
+          '💎 GOTW LOYALTY BOOST',
+          `Earned +${finalPoints} VIP Points (incorporating 3x Game of the Week multiplier boost) on ${gameTitle}!`,
+          'vip'
+        );
+      }
+    }
+
     return true;
   };
 
@@ -1828,46 +1973,160 @@ export default function CasinoGames({
         <div className="flex flex-col gap-4">
           
           {/* Game of the Week Prominent Premium Showcase */}
-          {gameOfTheWeek && (
-            <div className="bg-gradient-to-r from-amber-600/10 via-purple-900/10 to-amber-600/10 border-2 border-amber-500/25 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none relative overflow-hidden backdrop-blur-md shadow-[0_0_35px_rgba(245,158,11,0.08)]">
-              {/* Abs decorative background elements for layout depth */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none"></div>
-              
-              <div className="flex items-center gap-4 text-left">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border-2 border-amber-400/40 flex items-center justify-center text-3xl shrink-0 animate-pulse">
-                  {LISTED_GAMES.find(g => g.id === gameOfTheWeek.gameId)?.emoji || '🏆'}
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-amber-400 text-black text-[8px] font-black tracking-widest uppercase">
-                      🔥 GAME OF THE WEEK
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/20 text-[#00e600] text-[8px] font-mono font-black uppercase">
-                      {gameOfTheWeek.promoValue}
-                    </span>
+          {gameOfTheWeek && (() => {
+            const gotwGame = LISTED_GAMES.find(g => g.id === gameOfTheWeek.gameId) || LISTED_GAMES[0];
+            return (
+              <div className="flex flex-col gap-4">
+                <div className="bg-gradient-to-br from-[#1c133a] via-[#120d24] to-[#1d0e37] border-2 border-amber-500/30 rounded-2xl p-4 sm:p-6 select-none relative overflow-hidden shadow-[0_12px_45px_rgba(245,158,11,0.06)] animate-fadeIn">
+                  {/* Decorative ambient background lights */}
+                  <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                  <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                    <div className="flex items-start sm:items-center gap-4 text-left">
+                      <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border-2 border-amber-400/40 flex items-center justify-center text-4xl shrink-0 shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-pulse">
+                        {gotwGame?.emoji || '🏆'}
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-black tracking-widest uppercase shadow-[0_0_10px_rgba(245,158,11,0.4)]">
+                            👑 GAME OF THE WEEK LIMITLESS
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-[#00e600] text-[9px] font-mono font-black uppercase tracking-wider">
+                            {gameOfTheWeek.promoValue || '3x Loyalty'}
+                          </span>
+                          <span className="text-[10px] text-amber-300 font-bold font-mono bg-amber-950/40 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            ⏰ {gotwTimeLeft}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight leading-none">
+                          {gameOfTheWeek.bannerTitle || `${gotwGame?.title} Weekly Splash!`}
+                        </h3>
+                        <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
+                          {gameOfTheWeek.description || `Play ${gotwGame?.title} this week to claim enhanced 3x Loyalty VIP points, exclusive loss cashbacks, and special matching bonuses!`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0 z-20">
+                      <button
+                        onClick={() => setShowGotwPromoModal(true)}
+                        className="w-full sm:w-auto px-4 py-2.5 bg-purple-950/50 border border-purple-500/30 hover:bg-purple-900/45 text-purple-300 hover:text-purple-200 font-extrabold uppercase text-[10px] tracking-wider rounded-xl transition-all cursor-pointer text-center"
+                      >
+                        🎁 Claim Match Bonus
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (gotwGame) handleGameSelect(gotwGame);
+                        }}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+                      >
+                        Launch & Spin 🚀
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
-                    {gameOfTheWeek.bannerTitle}
-                  </h3>
-                  <p className="text-[10px] text-gray-300 max-w-lg leading-relaxed">
-                    {gameOfTheWeek.description}
-                  </p>
+
+                  {/* Enhanced Benefits Checklist */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-purple-900/40 relative z-10 text-[11px]">
+                    <div className="bg-[#120a21]/60 border border-purple-500/10 p-2.5 rounded-xl text-left flex items-start gap-2.5">
+                      <span className="text-amber-400 text-lg">💎</span>
+                      <div>
+                        <strong className="text-gray-200 block font-bold leading-tight uppercase text-[9.5px]">3x VIP Loyalty Points</strong>
+                        <span className="text-gray-400">Earn +30% VIP points on each game wager instead of the standard 10%.</span>
+                      </div>
+                    </div>
+                    <div className="bg-[#120a21]/60 border border-purple-500/10 p-2.5 rounded-xl text-left flex items-start gap-2.5">
+                      <span className="text-[#00e600] text-lg">🛡️</span>
+                      <div>
+                        <strong className="text-gray-200 block font-bold leading-tight uppercase text-[9.5px]">+15% High Cashback</strong>
+                        <span className="text-gray-400">Enjoy safe-side returns! Loss-protection boost credited straight to Cashback Wallet.</span>
+                      </div>
+                    </div>
+                    <div className="bg-[#120a21]/60 border border-purple-500/10 p-2.5 rounded-xl text-left flex items-start gap-2.5">
+                      <span className="text-purple-400 text-lg">🎁</span>
+                      <div>
+                        <strong className="text-gray-200 block font-bold leading-tight uppercase text-[9.5px]">Double Pocket Match</strong>
+                        <span className="text-gray-400">100% balance bonus matched instantly when depositing using promotion codes.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SNEAK PEEK & COMMUNITY VOTING SYSTEM FOR NEXT WEEK'S GAME */}
+                <div className="bg-[#101015] border border-[#21232c] rounded-2xl p-4 sm:p-5 select-none relative overflow-hidden">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-gray-800/20 pb-3">
+                    <div className="text-left">
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                        🗳️ Next Week's Game of the Week Vote
+                      </h4>
+                      <p className="text-[10px] text-gray-500">Pick next week's featured game & bonuses. Current top choice wins!</p>
+                    </div>
+                    {nextWeekVotedId && (
+                      <span className="bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-block animate-slideDown">
+                        ✓ Your Vote is Cast!
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left animate-fadeIn">
+                    {[
+                      { id: 'slot-video', title: 'Gates of Valhalla', emoji: '🎰', desc: 'Pragmatic Video Slot with multiplying multipliers.' },
+                      { id: 'live-roulette', title: 'Lightning Roulette', emoji: '🎡', desc: 'Evolution Live Dealer with up to 500x high lightning strikes.' },
+                      { id: 'instant-mines', title: 'Mines Gold Mines', emoji: '💣', desc: 'Original Mines guessing game. Uncover multipliers, avoid bombs.' }
+                    ].map(candidate => {
+                      const votes = nextWeekVotes[candidate.id] || 0;
+                      const totalVotes = (Object.values(nextWeekVotes) as number[]).reduce((a, b) => a + b, 0);
+                      const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                      const isVotedThis = nextWeekVotedId === candidate.id;
+
+                      return (
+                        <div 
+                          key={candidate.id}
+                          className={`p-3 rounded-xl border transition-all ${
+                            isVotedThis 
+                              ? 'bg-amber-950/20 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.05)]' 
+                              : 'bg-[#15161d] border-[#22242c] hover:border-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-2xl">{candidate.emoji}</span>
+                            <span className="text-[10px] font-mono font-bold text-gray-400 bg-black/40 px-1.5 py-0.5 rounded">
+                              {votes} votes ({percent}% )
+                            </span>
+                          </div>
+                          <h5 className="text-[11px] font-black text-white uppercase truncate">{candidate.title}</h5>
+                          <p className="text-[9.5px] text-gray-500 leading-tight mb-3 h-6 line-clamp-2">{candidate.desc}</p>
+                          
+                          {/* Vote Percent Slider Track */}
+                          <div className="w-full bg-black/50 h-1.5 rounded-full mb-3 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-1000 ${isVotedThis ? 'bg-amber-400' : 'bg-purple-600'}`}
+                              style={{ width: `${percent}%` }}
+                            ></div>
+                          </div>
+
+                          <button
+                            onClick={() => handleVoteForNextWeek(candidate.id)}
+                            disabled={nextWeekVotedId !== null}
+                            className={`w-full py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center ${
+                              isVotedThis 
+                                ? 'bg-amber-500 text-black font-black' 
+                                : nextWeekVotedId 
+                                  ? 'bg-[#1c1d24] text-gray-600 cursor-not-allowed' 
+                                  : 'bg-purple-950/40 hover:bg-purple-950 border border-purple-500/25 hover:border-purple-500/45 text-purple-400 hover:text-white'
+                            }`}
+                          >
+                            {isVotedThis ? '✓ Selected' : 'Vote Game'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-
-              <button
-                onClick={() => {
-                  const targetGame = LISTED_GAMES.find(g => g.id === gameOfTheWeek.gameId);
-                  if (targetGame) handleGameSelect(targetGame);
-                }}
-                className="w-full md:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black uppercase text-[10px] tracking-wider rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer shrink-0"
-              >
-                Launch & Spin
-              </button>
-            </div>
-          )}
+            );
+          })()}
 
           {/* VIP Loyalty Bonus Premium Interactive Panel */}
           <div className="bg-gradient-to-r from-purple-950/40 via-[#180931] to-purple-950/40 border-2 border-purple-500/25 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none relative overflow-hidden backdrop-blur-md shadow-[0_0_25px_rgba(147,51,234,0.12)]">
@@ -1888,21 +2147,23 @@ export default function CasinoGames({
                   <span className="px-2 py-0.5 rounded bg-black/40 border border-purple-500/30 text-purple-300 text-[8px] font-mono font-black uppercase">
                     Level: {userProfile.vipLevel}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-[#00e600] border border-emerald-500/20 text-[8px] font-mono font-bold leading-none">
-                    + KSh {
-                      userProfile.vipLevel === 'Bronze' ? '50' :
-                      userProfile.vipLevel === 'Silver' ? '150' :
-                      userProfile.vipLevel === 'Gold' ? '500' :
-                      userProfile.vipLevel === 'Platinum' ? '1,500' :
-                      userProfile.vipLevel === 'Diamond' ? '5,000' : '15,000'
-                    }
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-950/50 text-[#00e600] border border-emerald-500/20 text-[8px] font-mono font-bold leading-none animate-bounce">
+                    + KSh {dynamicVipBonusAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <h3 className="text-sm font-black text-white uppercase tracking-tight leading-tight flex items-center gap-1.5">
-                  {userProfile.vipLevel} Status Loyalty Reward
+                  🏆 {authSessionMode === 'real' ? 'Real Balance Coffer' : 'Demo Practice Coffer'} Loyalty
                 </h3>
                 <p className="text-[10px] text-purple-200/80 max-w-lg leading-relaxed">
-                  As a distinguished <strong className="text-pink-400 font-extrabold">{userProfile.vipLevel}</strong> tier member, claim your recurring cash loyalty reload instantly! High VIP status ranks yield up to KSh 15,000.
+                  {authSessionMode === 'real' ? (
+                    <>
+                      As a distinguished <strong className="text-pink-400 font-extrabold">{userProfile.vipLevel}</strong> tier member, claim your coffer commissions instantly! Real account coffers earn a <strong className="text-emerald-400 font-bold">5% commission</strong> on all successfully deposited money. Current coffer reward is <strong className="text-[#00e600] font-mono font-bold">KSh {dynamicVipBonusAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>, based on your <strong className="text-white font-mono font-bold">KSh {totalDeposited.toLocaleString()}</strong> lifetime real deposits.
+                    </>
+                  ) : (
+                    <>
+                      As a distinguished <strong className="text-pink-400 font-extrabold">{userProfile.vipLevel}</strong> tier member, reload your practice stakes instantly! Demo Practice coffers claim a fixed <strong className="text-[#00e600] font-sans font-black">KSh 100.00</strong> coffer bonus anytime for unlimited practice play.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -2028,8 +2289,12 @@ export default function CasinoGames({
             {/* Header Area */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-purple-900/30">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-purple-600/20 border-2 border-purple-500/40 flex items-center justify-center text-xl font-black text-purple-200 uppercase">
-                  {userProfile.avatar || 'FP'}
+                <div className="w-12 h-12 rounded-xl bg-purple-600/20 border-2 border-purple-500/40 flex items-center justify-center text-xl font-black text-purple-200 uppercase overflow-hidden">
+                  {userProfile.avatar && (userProfile.avatar.startsWith('data:image/') || userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
+                    <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    userProfile.avatar || 'FP'
+                  )}
                 </div>
                 <div className="text-left">
                   <h3 className="text-sm font-black text-white uppercase tracking-tight">
@@ -2151,6 +2416,89 @@ export default function CasinoGames({
 
           </div>
 
+        </div>
+      )}
+
+      {/* Game of the Week special deposit matching modal */}
+      {showGotwPromoModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn font-sans">
+          <div className="bg-[#141518] rounded-2xl border border-amber-500/30 max-w-sm w-full overflow-hidden shadow-[0_12px_50px_rgba(245,158,11,0.15)] flex flex-col">
+            <div className="flex items-center justify-between p-4 bg-[#0d0e10] border-b border-[#212327]">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎁</span>
+                <h4 className="text-white text-xs font-black uppercase tracking-wider">GOTW Special Match</h4>
+              </div>
+              <button 
+                onClick={() => setShowGotwPromoModal(false)}
+                className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-left">
+              <div className="bg-amber-950/20 border border-amber-500/20 p-3.5 rounded-xl text-xs text-amber-200">
+                <p className="font-extrabold mb-1">🔥 EXCLUSIVE GOTW CAMPAIGN</p>
+                <p>Deposit today to instantly claim 100% matching promotional play currency on this week's featured game! Valid for both M-Pesa & Card deposits.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-purple-300 uppercase font-black block">Featured Match Bonus Promo Code</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 bg-[#090a0d] border border-purple-900/40 rounded-xl px-4 py-2 flex items-center justify-between font-mono text-xs text-[#00e600] font-black tracking-widest bg-black">
+                    GOTW3X
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText('GOTW3X');
+                      triggerNotification('📋 Code Copied!', 'Promo Code "GOTW3X" copied! Enter this during your next cashier deposit.', 'general');
+                    }}
+                    className="px-4 py-1.5 bg-purple-950/40 hover:bg-purple-900 border border-purple-500/20 text-[#fbbf24] text-[10px] font-bold rounded-xl active:scale-95 transition-all cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-[10px] text-gray-400">
+                <span className="text-white font-bold block uppercase text-[9px]">How to redeem:</span>
+                <p className="flex items-start gap-2">
+                  <span className="text-[#00e600]">1.</span> 
+                  <span>Copy code <strong className="text-white">GOTW3X</strong> and click the Quick Cashier Deposit button below.</span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="text-[#00e600]">2.</span> 
+                  <span>Initiate any secure till or card deposit of KSh 200 or more in the cashier.</span>
+                </p>
+                <p className="flex items-start gap-2">
+                  <span className="text-[#00e600]">3.</span> 
+                  <span>Bonus Funds are matched instantly. Enjoy 3x VIP point generation on this week's featured Game of the Week!</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#0d0e10] border-t border-[#212327] flex gap-2">
+              <button
+                onClick={() => setShowGotwPromoModal(false)}
+                className="flex-1 py-2 bg-[#1b1c23] hover:bg-[#2c2e39] text-gray-300 font-bold uppercase text-[9px] tracking-wider rounded-xl transition-all cursor-pointer text-center"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowGotwPromoModal(false);
+                  const depBtn = document.getElementById('deposit-header-btn');
+                  if (depBtn) depBtn.click();
+                  else {
+                    triggerNotification('Cashier Triggered', 'Promo code "GOTW3X" is active! Click Deposit at the top right of the application.', 'general');
+                  }
+                }}
+                className="flex-1 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black font-black uppercase text-[9px] tracking-widest rounded-xl transition-all shadow-lg text-center cursor-pointer"
+              >
+                Deposit Now 🚀
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

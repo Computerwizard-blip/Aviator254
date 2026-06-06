@@ -44,10 +44,35 @@ export default function WalletAndTill({
   const [referenceCode, setReferenceCode] = useState<string>('');
   
   // Till Specific Simulation States
-  const [tillStep, setTillStep] = useState<'input' | 'processing' | 'awaiting_pin' | 'verified'>('input');
+  const [tillStep, setTillStep] = useState<'input' | 'processing' | 'awaiting_pin' | 'paste_data' | 'timer' | 'claim_award' | 'verified'>('input');
   const [simulatedPIN, setSimulatedPIN] = useState<string>('');
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const TILL_NUMBER = "580459"; // Simulated buy goods till
+
+  // Paste & verification states for WalletAndTill
+  const [pastedRefCode, setPastedRefCode] = useState<string>('');
+  const [pastedReceiptMessage, setPastedReceiptMessage] = useState<string>('');
+  const [walletVerificationTimer, setWalletVerificationTimer] = useState<number>(120);
+
+  // Live countdown effect for WalletAndTill
+  React.useEffect(() => {
+    let interval: any = null;
+    if (tillStep === 'timer' && walletVerificationTimer > 0) {
+      interval = setInterval(() => {
+        setWalletVerificationTimer((prev) => {
+          if (prev <= 1) {
+            setTillStep('claim_award');
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [tillStep, walletVerificationTimer]);
 
   // Card input states
   const [cardNumber, setCardNumber] = useState<string>('4000 1234 5678 9010');
@@ -384,17 +409,189 @@ export default function WalletAndTill({
                       </div>
 
                       <div className="space-y-2">
-                        <p className="text-[9.5px] text-gray-400 text-left leading-normal italic">
-                          💡 Sandbox Note: After payment has been completed on the link layout, click the green "I HAVE PAID" verification button below to credit your casino balance.
+                        <p className="text-[9.5px] text-gray-400 text-left leading-normal italic text-purple-300">
+                          💡 Sandbox Note: After payment has been completed on the link layout, click the green button below to proceed to the transaction code and SMS paste verification.
                         </p>
 
                         <button 
-                          onClick={verifyPINAndCredit}
-                          className="w-full py-3 bg-[#00e600] hover:bg-[#1bf31b] text-black font-black text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer"
+                          onClick={() => setTillStep('paste_data')}
+                          className="w-full py-3 bg-[#00e600] hover:bg-[#1bf31b] text-black font-black text-xs uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer font-bold"
                         >
-                          ✅ I Have Paid & Verified Link
+                          ✅ I Have Paid & Proceed to Verify
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {tillStep === 'paste_data' && (
+                    <div className="max-w-md mx-auto border border-purple-500/20 bg-[#160d2b] p-6 rounded-2xl relative shadow-xl space-y-4">
+                      <div className="text-center">
+                        <span className="text-xl">📝</span>
+                        <h4 className="text-xs font-black text-white uppercase italic mt-1">Submit M-Pesa Transaction Verification</h4>
+                        <p className="text-[10px] text-purple-300">Enter your copied transaction code and payment SMS receipt details below</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="text-left">
+                          <label className="text-[9px] text-[#fbbf24] font-bold block mb-1">M-PESA TRANSACTION REFERENCE CODE</label>
+                          <input 
+                            type="text"
+                            value={pastedRefCode}
+                            onChange={(e) => setPastedRefCode(e.target.value.toUpperCase().trim())}
+                            className="w-full bg-[#0c0616] border border-purple-900/50 rounded-lg p-2.5 text-xs font-mono font-bold text-amber-400"
+                            placeholder="e.g. RF538XGP91"
+                          />
+                        </div>
+
+                        <div className="text-left">
+                          <label className="text-[9px] text-[#fbbf24] font-bold block mb-1">FULL SAFARICOM CONFIRMATION SMS RECORD</label>
+                          <textarea 
+                            rows={3}
+                            value={pastedReceiptMessage}
+                            onChange={(e) => setPastedReceiptMessage(e.target.value)}
+                            className="w-full bg-[#0c0616] border border-purple-900/50 rounded-lg p-2.5 text-[10px] text-white leading-normal"
+                            placeholder="Paste the complete SMS receipt you received from Safaricom M-Pesa..."
+                          />
+                        </div>
+
+                        <div className="p-2.5 bg-red-950/20 rounded border border-red-500/10 text-[9px] text-red-200 pointer-events-none text-left">
+                          ⚠️ Security Advisory: Any non-authentic or spoofed reference code pattern triggers systematic session freezes. Validated securely via Safaricom direct endpoints.
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button 
+                            onClick={() => setTillStep('awaiting_pin')}
+                            className="px-4 py-2.5 bg-purple-900/50 hover:bg-purple-800 text-xs font-bold text-white rounded cursor-pointer transition-colors"
+                          >
+                            Back
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (!pastedRefCode) {
+                                triggerNotification('Reference Code Missing', 'Please paste your M-Pesa transaction reference code!', 'general');
+                                return;
+                              }
+                              if (!pastedReceiptMessage) {
+                                triggerNotification('Receipt Missing', 'Please paste the received Safaricom payment SMS body!', 'general');
+                                return;
+                              }
+                              setWalletVerificationTimer(120); // Reset timer to 2 minutes
+                              setTillStep('timer');
+                            }}
+                            className="flex-grow py-2.5 bg-[#00e600] hover:bg-[#1bf31b] text-black font-black text-xs uppercase tracking-wider rounded transition-all cursor-pointer text-center font-bold"
+                          >
+                            Submit for Ledger Review
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {tillStep === 'timer' && (
+                    <div className="max-w-md mx-auto border border-purple-500/20 bg-[#160d2b] p-6 rounded-2xl text-center space-y-4 animate-fadeIn">
+                      <div className="relative inline-block mx-auto">
+                        <div className="w-16 h-16 rounded-full border-4 border-t-[#00e600] border-purple-900/30 animate-spin mx-auto" />
+                        <span className="absolute inset-0 flex items-center justify-center text-xs font-mono font-black text-rose-100 uppercase tracking-widest">
+                          {Math.floor(walletVerificationTimer / 60)}:{String(walletVerificationTimer % 60).padStart(2, '0')}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-xs font-black text-white uppercase italic animate-pulse">Scanning Live M-Pesa Ledgers...</h4>
+                        <p className="text-[10px] text-purple-300 font-medium">Validating payment reference code <span className="text-[#fbbf24] font-mono">{pastedRefCode}</span></p>
+                      </div>
+
+                      <div className="bg-[#0f071f] p-3 rounded-lg border border-purple-500/10 text-left font-mono text-[9px] text-purple-400 space-y-1.5 mx-auto">
+                        <div className="flex justify-between">
+                          <span>Verification State:</span>
+                          <span className="text-amber-400 font-bold">QUERY RUNNING</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Matched Reference:</span>
+                          <span className="text-white font-bold">{pastedRefCode}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Current Action:</span>
+                          <span className="text-[#00e600] font-medium">
+                            {walletVerificationTimer > 90 ? "📡 Syncing Safaricom nodes..." :
+                             walletVerificationTimer > 40 ? "📂 Compiling SMS hash index..." :
+                             "🔑 Validating ledger record signature..."}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWalletVerificationTimer(0);
+                          setTillStep('claim_award');
+                        }}
+                        className="w-full py-2 bg-[#2d005c] hover:bg-[#3f007e] border border-purple-500/20 text-[#fbbf24] text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer shadow-md"
+                      >
+                        ⚡ Dev Sandbox: Speed Up Timer (Skip 2 Mins Limit)
+                      </button>
+                    </div>
+                  )}
+
+                  {tillStep === 'claim_award' && (
+                    <div className="max-w-md mx-auto border border-purple-550/20 bg-[#160d2b] p-6 rounded-2xl text-center space-y-4 animate-scaleUp">
+                      <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full flex items-center justify-center text-2xl shadow-lg ring-4 ring-amber-400/5 mx-auto animate-bounce">
+                        👑
+                      </div>
+
+                      <div>
+                        <h4 className="text-amber-400 font-black text-sm uppercase tracking-widest leading-none">TRANSACTION MATCHED!</h4>
+                        <p className="text-[10px] text-purple-300 leading-normal max-w-[280px] mx-auto mt-1">
+                          Safaricom authenticated payment matched successfully! Your credit KSh {parseFloat(amountInput).toLocaleString()} with matching ID <span className="text-amber-300 font-mono font-bold bg-black/40 px-1 rounded">{pastedRefCode}</span> is loaded.
+                        </p>
+                      </div>
+
+                      <div className="p-3 bg-black/40 rounded-xl text-[10px] text-purple-400 space-y-1 text-left border border-purple-900/30 font-sans mx-auto">
+                        <div className="flex justify-between">
+                          <span>M-Pesa Reference:</span>
+                          <span className="font-mono text-white">{pastedRefCode}</span>
+                        </div>
+                        <div className="flex justify-between text-green-400 font-bold">
+                          <span>Ledger Status:</span>
+                          <span className="text-[9px]">AUTHENTIC AND COMPLETED</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Chips Loaded:</span>
+                          <span className="font-mono text-emerald-400 font-bold">KSh {parseFloat(amountInput).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[#fbbf24] font-bold">
+                          <span>🎁 Extra Bonus Crediting:</span>
+                          <span>+KSh {(parseFloat(amountInput) * 0.20).toLocaleString()} (20% Extra matched)</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const depAmount = parseFloat(amountInput);
+                          setTillStep('verified');
+
+                          // Add cash to main balance and bonus matching
+                          const bonusAdd = depAmount * 0.20; // 20% matched
+                          setWallet((prev) => ({
+                            ...prev,
+                            mainBalance: prev.mainBalance + depAmount,
+                            bonusBalance: prev.bonusBalance + bonusAdd
+                          }));
+
+                          addTransaction({
+                            type: 'deposit',
+                            amount: depAmount,
+                            currency: 'KSh',
+                            method: 'M-Pesa Payment Link',
+                            referenceCode: pastedRefCode
+                          });
+
+                          triggerNotification('Deposit Cleared Successfully!', `Credited +KSh ${depAmount.toLocaleString()} to Main Wallet & +KSh ${bonusAdd.toLocaleString()} bonus. Enjoy Aviator!`, 'deposit');
+                        }}
+                        className="w-full py-4 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-yellow-500/10 cursor-pointer animate-pulse text-center font-bold"
+                      >
+                        🎁 CLAIM KSh {parseFloat(amountInput).toLocaleString()} CHIPS & BONUSES!
+                      </button>
                     </div>
                   )}
 

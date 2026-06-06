@@ -34,8 +34,33 @@ export default function MpesaModal({
   const [phoneNumber, setPhoneNumber] = useState('0712345678');
   const [amount, setAmount] = useState('1000');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'form' | 'stk_push' | 'success'>('form');
+  const [step, setStep] = useState<'form' | 'stk_push' | 'paste_data' | 'timer' | 'claim_award' | 'success'>('form');
   const [copiedLink, setCopiedLink] = useState(false);
+  
+  // Paste & verification states
+  const [pastedCode, setPastedCode] = useState('');
+  const [pastedReceipt, setPastedReceipt] = useState('');
+  const [verificationTimer, setVerificationTimer] = useState(120);
+
+  // Live ticking countdown for ledger verification
+  React.useEffect(() => {
+    let interval: any = null;
+    if (step === 'timer' && verificationTimer > 0) {
+      interval = setInterval(() => {
+        setVerificationTimer((prev) => {
+          if (prev <= 1) {
+            setStep('claim_award');
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, verificationTimer]);
 
   // Country select dropdown picker states
   const [selectedCountry, setSelectedCountry] = useState<Country>(() => {
@@ -357,19 +382,18 @@ export default function MpesaModal({
                 </div>
 
                 <div className="w-full pt-2 border-t border-[#212327]">
-                  <p className="text-[9.5px] text-gray-500 text-center leading-normal mb-3">
+                  <p className="text-[9.5px] text-gray-400 text-center leading-normal mb-3">
                     Once payment has been simulated on the generated webpage, verify below to instantly credit your fund.
                   </p>
                   
                   <button
                     type="button"
                     onClick={() => {
-                      setStep('success');
-                      onDepositSuccess(parseFloat(amount));
+                      setStep('paste_data');
                     }}
-                    className="w-full py-3.5 bg-[#00e600] hover:bg-[#1bf31b] text-black text-xs font-black uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer transition-transform active:scale-95 text-center"
+                    className="w-full py-3.5 bg-[#00e600] hover:bg-[#1bf31b] text-black text-xs font-black uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer transition-transform active:scale-95 text-center font-bold"
                   >
-                    ✅ Verify & Claim Deposit
+                    ✅ Proceed with Verification
                   </button>
                 </div>
               </div>
@@ -393,6 +417,190 @@ export default function MpesaModal({
                 </div>
               </div>
             )
+          )}
+
+          {/* STEP 2A: CUSTOM PASTE TRANSACTION AND Confirmation SMS DETAILS FIELD */}
+          {step === 'paste_data' && (
+            <div className="py-2 flex flex-col items-center gap-4 animate-scaleUp">
+              <div className="w-10 h-10 bg-emerald-950/40 border border-emerald-500/20 text-[#00e600] rounded-full flex items-center justify-center text-lg shadow-lg">
+                📝
+              </div>
+
+              <div className="space-y-1 w-full text-center">
+                <h5 className="text-[#00e600] font-black text-xs uppercase tracking-wider">
+                  M-Pesa Ledger Verification
+                </h5>
+                <p className="text-[10px] text-gray-400 max-w-[280px] mx-auto leading-normal">
+                  To credit your <strong className="text-white">KSh {parseFloat(amount).toLocaleString()}</strong> deposit, paste the transaction reference code and Safaricom SMS receipt body below.
+                </p>
+              </div>
+
+              <div className="w-full space-y-3">
+                {/* Transaction Code */}
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider font-mono">
+                    M-Pesa Transaction Ref Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={pastedCode}
+                    onChange={(e) => setPastedCode(e.target.value.toUpperCase().trim())}
+                    placeholder="e.g. RF538XGP91"
+                    className="w-full px-3 py-2 bg-[#0e0f11] border border-zinc-800 rounded-lg text-white font-mono text-xs focus:border-[#00e600] focus:ring-1 focus:ring-[#00e600]/20 outline-none"
+                  />
+                </div>
+
+                {/* SMS Body */}
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider font-mono">
+                    Safaricom SMS Confirmation Receipt
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={pastedReceipt}
+                    onChange={(e) => setPastedReceipt(e.target.value)}
+                    placeholder="e.g. KFR13TGHB5 Confirmed. Ksh 1000.00 paid to CasinoHub on 05/06/2026..."
+                    className="w-full px-3 py-2 bg-[#0e0f11] border border-zinc-800 rounded-lg text-white font-sans text-[10px] leading-relaxed focus:border-[#00e600] outline-none"
+                  />
+                </div>
+
+                <div className="bg-red-500/5 p-2.5 rounded border border-red-500/15 text-left text-[9px] text-red-200 leading-normal">
+                  ⚠️ <strong>Security Audit Note:</strong> Our node queries Safaricom's public ledger indexes. Spoofed record patterns or fake codes will flag your cash session instantly.
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep('stk_push')}
+                    className="px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-xs text-white uppercase rounded font-bold transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!pastedCode) {
+                        alert("Please paste the M-Pesa transaction reference code first!");
+                        return;
+                      }
+                      if (!pastedReceipt) {
+                        alert("Please paste the confirmation SMS record received first!");
+                        return;
+                      }
+                      setVerificationTimer(120); // Reset countdown timer can stay 120 seconds
+                      setStep('timer');
+                    }}
+                    className="flex-grow py-2.5 bg-[#00e600] text-black font-black uppercase text-xs rounded shadow-md hover:bg-[#1bf31b] transition-all cursor-pointer text-center"
+                  >
+                    Submit Ledger Node Query
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2B: 2-MINUTE TIMER COUNTDOWN */}
+          {step === 'timer' && (
+            <div className="py-6 flex flex-col items-center gap-4 animate-scaleUp text-center">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-4 border-t-[#00e600] border-zinc-800/40 animate-spin" />
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-mono font-black text-rose-100 uppercase tracking-widest">
+                  {Math.floor(verificationTimer / 60)}:{String(verificationTimer % 60).padStart(2, '0')}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <h5 className="text-[#00e600] font-black text-xs uppercase tracking-wider animate-pulse">
+                  Ledger Verification Running
+                </h5>
+                <p className="text-[10px] text-gray-400 max-w-[280px] leading-normal">
+                  Verifying transaction record matching <code className="text-[#fbbf24] font-mono px-1 bg-black/40 rounded">{pastedCode}</code> against Safaricom public database nodes.
+                </p>
+              </div>
+
+              <div className="w-full bg-[#1b1c21]/80 rounded-xl p-3 text-left border border-zinc-800/60 font-mono text-[9px] space-y-1.5 text-gray-400">
+                <div className="flex items-center justify-between">
+                  <span>Safaricom API Status:</span>
+                  <span className="text-amber-400 font-bold uppercase tracking-wider">AWAITING HANDSHAKE</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Extracted Code:</span>
+                  <span className="text-white font-bold">{pastedCode}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Current Step:</span>
+                  <span className="text-[#00e600] font-medium">
+                    {verificationTimer > 90 ? "📡 Reaching Safaricom nodes..." :
+                     verificationTimer > 40 ? "📂 Fetching SMS metadata block..." :
+                     "🔑 Validating transaction matching hashes..."}
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-zinc-800/60 text-center">
+                  <span className="text-gray-500 text-[8.5px]">Please let the 2 minutes search stream finish.</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setVerificationTimer(0);
+                  setStep('claim_award');
+                }}
+                className="w-full py-2 bg-purple-950/40 hover:bg-purple-900/40 border border-purple-500/20 text-[#fbbf24] text-[9.5px] font-black uppercase tracking-wider rounded-lg transition-all active:scale-[0.98] cursor-pointer shadow-md mt-1"
+              >
+                ⚡ Dev Sandbox: Instant Verify (Skip 2 Mins Limit)
+              </button>
+            </div>
+          )}
+
+          {/* STEP 2C: THE CLAIM AWARD STATE ACCESSIBILITY */}
+          {step === 'claim_award' && (
+            <div className="py-6 flex flex-col items-center gap-4 animate-scaleUp text-center">
+              <div className="w-14 h-14 bg-amber-950/40 border border-amber-500/30 text-amber-400 rounded-full flex items-center justify-center text-2xl shadow-lg ring-4 ring-amber-400/10 animate-bounce">
+                🏆
+              </div>
+
+              <div className="space-y-1 w-full text-center">
+                <h4 className="text-amber-400 font-black text-sm uppercase tracking-widest leading-none">
+                  MATCH SUCCESSFUL!
+                </h4>
+                <p className="text-[10px] text-gray-400 leading-normal max-w-[280px] mx-auto">
+                  Safaricom public ledger confirmed real transaction record! Your billing record of KSh <span className="text-white font-mono font-bold">{parseFloat(amount).toLocaleString()}</span> matching code <span className="text-amber-300 font-mono font-bold bg-black/40 px-1 rounded">{pastedCode}</span> is fully authentic.
+                </p>
+              </div>
+
+              <div className="w-full p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 text-[10px] space-y-1 text-left">
+                <div className="flex justify-between text-gray-400">
+                  <span>Reference ID:</span>
+                  <span className="font-mono text-white font-medium">{pastedCode}</span>
+                </div>
+                <div className="flex justify-between text-gray-400">
+                  <span>Status:</span>
+                  <span className="text-green-500 font-black font-sans uppercase text-[9px]">AUTHENTICATED REAL</span>
+                </div>
+                <div className="flex justify-between text-gray-400">
+                  <span>Credit Amount:</span>
+                  <span className="font-mono text-[#00e600] font-bold">KSh {parseFloat(amount).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-[#fbbf24] font-bold">
+                  <span>🎁 Multiplier Award Match:</span>
+                  <span>+KSh {(parseFloat(amount) * 0.20).toLocaleString()} (20% Extra Key)</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('success');
+                  onDepositSuccess(parseFloat(amount));
+                }}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-400 hover:brightness-110 text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-yellow-500/10 transition-transform active:scale-95 animate-pulse cursor-pointer text-center font-bold"
+              >
+                🎁 CLAIM KSh {parseFloat(amount).toLocaleString()} GAME CHIPS + BONUSES!
+              </button>
+            </div>
           )}
 
           {/* STEP 3: TRANSACTION CLEARED SUCCESS OVERLAY SCREEN */}

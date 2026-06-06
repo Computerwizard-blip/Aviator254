@@ -16,9 +16,11 @@ interface AviatorBetPanelProps {
   setIsPlaced: (v: boolean) => void;
   hasCashedOut: boolean;
   setHasCashedOut: (v: boolean) => void;
-  onBetPlaced: (amount: number) => void;
+  onBetPlaced: (amount: number) => boolean | void;
   onCashOut: (multiplier: number, amount: number) => void;
   onBetCancelled?: (amount: number) => void;
+  onRefill?: (amount: number) => void;
+  isDemo?: boolean;
 }
 
 export default function AviatorBetPanel({
@@ -34,6 +36,8 @@ export default function AviatorBetPanel({
   onBetPlaced,
   onCashOut,
   onBetCancelled,
+  onRefill,
+  isDemo = true,
 }: AviatorBetPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<'bet' | 'auto'>('bet');
   const [betAmount, setBetAmount] = useState<number>(10.00);
@@ -44,6 +48,7 @@ export default function AviatorBetPanel({
   const [autoBetEnabled, setAutoBetEnabled] = useState<boolean>(false);
   const [isWaitingNextRound, setIsWaitingNextRound] = useState<boolean>(false);
   const [panelError, setPanelError] = useState<string>('');
+  const [showRefillPrompt, setShowRefillPrompt] = useState<boolean>(false);
 
   const isStakeLocked = isPlaced && !hasCashedOut && !isWaitingNextRound;
 
@@ -126,8 +131,12 @@ export default function AviatorBetPanel({
     }
 
     if (balance < betAmount) {
-      setPanelError("Low Balance! Please make a deposit of KSh 100+");
-      setTimeout(() => setPanelError(''), 4000);
+      if (isDemo) {
+        setShowRefillPrompt(true);
+      } else {
+        setPanelError("Low Balance! Please make a deposit of KSh 100+");
+        setTimeout(() => setPanelError(''), 4000);
+      }
       return;
     }
 
@@ -135,7 +144,12 @@ export default function AviatorBetPanel({
     setIsPlaced(true);
     setHasCashedOut(false);
     setPlacedBetAmount(betAmount);
-    onBetPlaced(betAmount);
+    const success = onBetPlaced(betAmount);
+    if (success === false) {
+      setIsWaitingNextRound(false);
+      setIsPlaced(false);
+      setPlacedBetAmount(0);
+    }
   };
 
   // Perform Bet placements
@@ -167,13 +181,18 @@ export default function AviatorBetPanel({
     }
 
     if (balance < betAmount) {
-      setPanelError("Low Balance! Please make a deposit of KSh 100+");
-      setTimeout(() => setPanelError(''), 4000);
+      if (isDemo) {
+        setShowRefillPrompt(true);
+      } else {
+        setPanelError("Low Balance! Please make a deposit of KSh 100+");
+        setTimeout(() => setPanelError(''), 4000);
+      }
       return;
     }
 
     // Capture whether the flight is currently soaring or not
-    if (crashActive || !countdownActive) {
+    const expectWaiting = !!(crashActive || !countdownActive);
+    if (expectWaiting) {
       setIsWaitingNextRound(true);
     } else {
       setIsWaitingNextRound(false);
@@ -182,7 +201,12 @@ export default function AviatorBetPanel({
     setIsPlaced(true);
     setHasCashedOut(false);
     setPlacedBetAmount(betAmount);
-    onBetPlaced(betAmount);
+    const success = onBetPlaced(betAmount);
+    if (success === false) {
+      setIsWaitingNextRound(false);
+      setIsPlaced(false);
+      setPlacedBetAmount(0);
+    }
   };
 
   // Trigger cashout payout
@@ -211,7 +235,11 @@ export default function AviatorBetPanel({
         setIsPlaced(true);
         setHasCashedOut(false);
         setPlacedBetAmount(betAmount);
-        onBetPlaced(betAmount);
+        const success = onBetPlaced(betAmount);
+        if (success === false) {
+          setIsPlaced(false);
+          setPlacedBetAmount(0);
+        }
       }
     }
   }, [countdownActive, autoBetEnabled]);
@@ -226,11 +254,7 @@ export default function AviatorBetPanel({
   // Reset states when round ends
   useEffect(() => {
     if (!crashActive && !countdownActive) {
-      if (isWaitingNextRound) {
-        // Enters the active zone for the loaded next round countdown
-        setIsWaitingNextRound(false);
-        setHasCashedOut(false);
-      } else {
+      if (!isWaitingNextRound) {
         if (!autoBetEnabled) {
           setIsPlaced(false);
           setPlacedBetAmount(0);
@@ -499,11 +523,47 @@ export default function AviatorBetPanel({
               )
             )
           )}
-          {panelError && (
+          {showRefillPrompt ? (
+            <div className="bg-[#151221] border border-purple-500/30 rounded-xl p-3 mt-2 text-center animate-fadeIn space-y-2.5">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-purple-300 font-bold">
+                💳 <span>Please refill your account</span>
+              </div>
+              
+              <div className="text-xl font-mono font-black text-[#00e600] animate-pulse">
+                50,000.00 KSh
+              </div>
+              
+              <div className="text-[10px] text-gray-400">
+                Would you like to refill your account balance?
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onRefill) {
+                      onRefill(50000);
+                    }
+                    setShowRefillPrompt(false);
+                  }}
+                  className="flex-1 py-1.5 bg-[#2cb400] hover:bg-[#34d100] text-black font-black text-xs uppercase rounded-lg border-b-2 border-green-700 active:scale-95 transition-all cursor-pointer"
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRefillPrompt(false)}
+                  className="flex-1 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs uppercase rounded-lg active:scale-95 transition-all cursor-pointer"
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          ) : panelError ? (
             <div className="text-[10px] text-red-400 font-bold bg-red-950/40 border border-red-500/20 text-center rounded-lg mt-1.5 py-1 animate-fadeIn">
               ⚠️ {panelError}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

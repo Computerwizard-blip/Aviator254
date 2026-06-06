@@ -19,6 +19,7 @@ import AdminPanel from './components/AdminPanel';
 import NotificationsCenter from './components/NotificationsCenter';
 import WelcomingIntro from './components/WelcomingIntro';
 import ProfilePanel from './components/ProfilePanel';
+import SettingsModal from './components/SettingsModal';
 import { Lock, PhoneCall, ShieldAlert, HeartHandshake, AlertOctagon, Gamepad2, Settings, ListFilter, Bell } from 'lucide-react';
 import { Wallet, UserProfile, JackpotPool, Transaction, NotificationItem } from './types';
 
@@ -163,13 +164,19 @@ export default function App() {
   };
 
   const balance = authSessionMode === 'real' ? wallet.realBalance : wallet.demoBalance;
+  const balanceRef = useRef<number>(balance);
+
+  useEffect(() => {
+    balanceRef.current = balance;
+  }, [balance]);
 
   const setBalance = (val: number | ((prev: number) => number)) => {
     setWallet(prev => {
       const isReal = authSessionMode === 'real';
       const currentVal = isReal ? prev.realBalance : prev.demoBalance;
-      const nextVal = typeof val === 'function' ? val(currentVal) : val;
+      const nextVal = typeof val === 'function' ? val((balanceRef.current !== undefined && Math.abs(balanceRef.current - currentVal) < 1) ? balanceRef.current : currentVal) : val;
       const roundedVal = parseFloat(nextVal.toFixed(2));
+      balanceRef.current = roundedVal;
       if (isReal) {
         return {
           ...prev,
@@ -186,17 +193,31 @@ export default function App() {
     });
   };
 
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    username: 'francypendy',
-    email: 'francypendy@gmail.com',
-    phone: '0712345678',
-    avatar: 'FP',
-    language: 'EN',
-    currency: 'KSh',
-    vipLevel: 'Silver',
-    vipPoints: 1240,
-    joinedDate: '2026-01-10',
-    referralCode: 'REF-FRANCYPENDY-5678'
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const baseProfile: UserProfile = {
+      username: 'francypendy',
+      email: 'francypendy@gmail.com',
+      phone: '0712345678',
+      avatar: 'FP',
+      language: 'EN',
+      currency: 'KSh',
+      vipLevel: 'Silver',
+      vipPoints: 1240,
+      joinedDate: '2026-01-10',
+      referralCode: 'REF-FRANCYPENDY-5678'
+    };
+
+    try {
+      const customSaved = localStorage.getItem('casinohub_custom_settings_profile');
+      if (customSaved) {
+        const parsed = JSON.parse(customSaved);
+        if (parsed.fullName) baseProfile.fullName = parsed.fullName;
+        if (parsed.username) baseProfile.username = parsed.username;
+        if (parsed.avatar) baseProfile.avatar = parsed.avatar;
+      }
+    } catch (e) {}
+
+    return baseProfile;
   });
 
   const [jackpotPool, setJackpotPool] = useState<JackpotPool>({
@@ -283,7 +304,12 @@ export default function App() {
   };
 
   const handleToggleAuthSessionMode = () => {
-    if (authSessionMode === 'demo') {
+    const targetMode = authSessionMode === 'demo' ? 'real' : 'demo';
+    setSwitchModeTargetState(targetMode);
+  };
+
+  const executeToggleAuthSessionMode = (targetMode: 'real' | 'demo') => {
+    if (targetMode === 'real') {
       // Switch to Real mode
       const saved = localStorage.getItem('casinohub_registered_account');
       if (saved) {
@@ -347,6 +373,7 @@ export default function App() {
         'general'
       );
     }
+    setSwitchModeTargetState(null);
   };
 
   const incrementJackpots = (amount: number) => {
@@ -479,6 +506,7 @@ export default function App() {
     payout?: number;
     time: string;
     status: 'WON' | 'LOST' | 'ACTIVE';
+    mode?: 'demo' | 'real';
   }[]>([]);
 
   // Simulated live lobby bettors
@@ -498,10 +526,33 @@ export default function App() {
     }
   }, [bigWinOverlay]);
 
+  // Automatic demo account replenishment when balance goes below 10 KSh
+  useEffect(() => {
+    if (authSessionMode === 'demo' && wallet.demoBalance < 10) {
+      setWallet(prev => {
+        const nextDemo = parseFloat((prev.demoBalance + 50000.00).toFixed(2));
+        const updated = {
+          ...prev,
+          demoBalance: nextDemo,
+          mainBalance: nextDemo
+        };
+        localStorage.setItem('casinohub_wallet_balances', JSON.stringify(updated));
+        return updated;
+      });
+      triggerNotification(
+        '💰 RECHARGED',
+        'Your demo account balance dropped below 10.00 KSh! We added +50,000.00 KSh of free demo credits for practice.',
+        'general'
+      );
+    }
+  }, [wallet.demoBalance, authSessionMode]);
+
   // M-Pesa overlay indicator State
   const [isDepositOpen, setIsDepositOpen] = useState<boolean>(false);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [isDownloadAppOpen, setIsDownloadAppOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [switchModeTargetState, setSwitchModeTargetState] = useState<'real' | 'demo' | null>(null);
 
   const handleSignOut = () => {
     sessionStorage.removeItem('casinohub_session_authenticated');
@@ -531,12 +582,20 @@ export default function App() {
   // Synchronized Multi-Device Ticker Refs
   const panel1ActiveBetRef = useRef<number | null>(null);
   const panel2ActiveBetRef = useRef<number | null>(null);
+  const panel1NextRoundBetRef = useRef<number | null>(null);
+  const panel2NextRoundBetRef = useRef<number | null>(null);
+  const panel1BetModeRef = useRef<'demo' | 'real' | null>(null);
+  const panel2BetModeRef = useRef<'demo' | 'real' | null>(null);
+  const panel1NextRoundBetModeRef = useRef<'demo' | 'real' | null>(null);
+  const panel2NextRoundBetModeRef = useRef<'demo' | 'real' | null>(null);
+  const bothBetsPlacedInRoundRef = useRef<boolean>(false);
   const gamePhaseRef = useRef<'lobby' | 'flight' | 'crashed' | null>(null);
   const currentRoundIndexRef = useRef<number>(-1);
 
   // Helper: setup simulated other players bets at start of lobby
   const generateSimulatedLobbyBettors = (roundIndex: number) => {
     const rand = Math.random;
+    const limit = getRoundLimit(roundIndex);
     
     // a maximum of 1500 to 2500 in starting
     const maxStart = Math.floor(rand() * (2500 - 1500 + 1)) + 1500;
@@ -579,8 +638,24 @@ export default function App() {
         ? Math.floor(rand() * 800) + 100 
         : Math.floor(rand() * 11000) + 1000;
 
-      const cashoutThreshold = parseFloat((1.05 + rand() * 1500.0).toFixed(2));
-      const willCashOut = rand() > 0.12;
+      // Realistic cashout threshold distributions matching actual round's crash limit!
+      const canSucceed = limit > 1.05;
+      const willSucceed = canSucceed && (rand() < 0.65); // 65% of players successfully cash out before crashing
+
+      let cashoutThreshold = 1.5;
+      let willCashOut = true;
+
+      if (willSucceed) {
+        // Distribute cashouts down to 1.05 up to limit, heavily skewed to early cashouts for authenticity
+        const powerFactor = Math.pow(rand(), 1.7);
+        cashoutThreshold = parseFloat((1.05 + powerFactor * (limit - 1.05)).toFixed(2));
+        willCashOut = true;
+      } else {
+        // They failed / chose to cash out too late (or crash before reaching the threshold)
+        // Set their target higher than the crash limit of the round
+        cashoutThreshold = parseFloat((limit + 0.10 + rand() * 150.0).toFixed(2));
+        willCashOut = rand() > 0.40;
+      }
 
       poolList.push({
         id: `b-${i}-${Math.floor(rand() * 10000)}`,
@@ -602,28 +677,34 @@ export default function App() {
   const resolveRoundUnsecuredBets = () => {
     const lostAmt1 = panel1ActiveBetRef.current;
     if (lostAmt1 !== null) {
+      const mode = panel1BetModeRef.current || (authSessionMode === 'real' ? 'real' : 'demo');
       setMyBets(prev => [
         {
           amount: lostAmt1,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'LOST'
+          status: 'LOST',
+          mode
         },
         ...prev
       ]);
       panel1ActiveBetRef.current = null;
+      panel1BetModeRef.current = null;
     }
 
     const lostAmt2 = panel2ActiveBetRef.current;
     if (lostAmt2 !== null) {
+      const mode = panel2BetModeRef.current || (authSessionMode === 'real' ? 'real' : 'demo');
       setMyBets(prev => [
         {
           amount: lostAmt2,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          status: 'LOST'
+          status: 'LOST',
+          mode
         },
         ...prev
       ]);
       panel2ActiveBetRef.current = null;
+      panel2BetModeRef.current = null;
     }
   };
 
@@ -686,6 +767,7 @@ export default function App() {
           setCrashActive(true);
           setCountdownValue(null);
           setRoundCrashLimit(limit);
+          bothBetsPlacedInRoundRef.current = (panel1ActiveBetRef.current !== null && panel2ActiveBetRef.current !== null);
           setCurrentPhase('flight');
         }
       } else if (currentPhase === 'flight') {
@@ -748,6 +830,24 @@ export default function App() {
       } else if (currentPhase === 'crashed') {
         if (elapsed >= crashedDuration) {
           // Transition to next round immediately after display!
+          if (panel1NextRoundBetRef.current !== null) {
+            panel1ActiveBetRef.current = panel1NextRoundBetRef.current;
+            panel1BetModeRef.current = panel1NextRoundBetModeRef.current;
+            panel1NextRoundBetRef.current = null;
+            panel1NextRoundBetModeRef.current = null;
+            setPanel1Placed(true);
+            setPanel1Cashed(false);
+          }
+          if (panel2NextRoundBetRef.current !== null) {
+            panel2ActiveBetRef.current = panel2NextRoundBetRef.current;
+            panel2BetModeRef.current = panel2NextRoundBetModeRef.current;
+            panel2NextRoundBetRef.current = null;
+            panel2NextRoundBetModeRef.current = null;
+            setPanel2Placed(true);
+            setPanel2Cashed(false);
+          }
+
+          bothBetsPlacedInRoundRef.current = false;
           setRoundIndex(prev => prev + 1);
           setCurrentPhase('lobby');
         }
@@ -759,32 +859,83 @@ export default function App() {
   }, [currentPhase, roundIndex, startingPlayers, finalMinPlayers]);
 
   // Dual Panel handlers
-  const handleBetPlaced = (panelId: string, amount: number) => {
+  const handleBetPlaced = (panelId: string, amount: number): boolean => {
+    // Verify current balance via thread-safe balanceRef
+    if (balanceRef.current < amount) {
+      triggerNotification(
+        '⚠️ LIMIT EXCEEDED',
+        'Cannot place this bet. The combined bet values exceed your wallet balance!',
+        'general'
+      );
+      if (panelId === 'panel1') {
+        setPanel1Placed(false);
+        setPanel1Cashed(false);
+        setPanel1BetVal(0);
+        panel1ActiveBetRef.current = null;
+        panel1NextRoundBetRef.current = null;
+        panel1BetModeRef.current = null;
+        panel1NextRoundBetModeRef.current = null;
+      } else {
+        setPanel2Placed(false);
+        setPanel2Cashed(false);
+        setPanel2BetVal(0);
+        panel2ActiveBetRef.current = null;
+        panel2NextRoundBetRef.current = null;
+        panel2BetModeRef.current = null;
+        panel2NextRoundBetModeRef.current = null;
+      }
+      return false;
+    }
+
     // Deduct wager instantaneously
+    balanceRef.current = parseFloat((balanceRef.current - amount).toFixed(2));
     setBalance(prev => parseFloat((prev - amount).toFixed(2)));
+
+    const isNextRound = currentPhase === 'flight' || currentPhase === 'crashed';
+    const activeMode = authSessionMode === 'real' ? 'real' : 'demo';
 
     if (panelId === 'panel1') {
       setPanel1Placed(true);
       setPanel1Cashed(false);
       setPanel1BetVal(amount);
-      panel1ActiveBetRef.current = amount;
+      if (isNextRound) {
+        panel1NextRoundBetRef.current = amount;
+        panel1NextRoundBetModeRef.current = activeMode;
+      } else {
+        panel1ActiveBetRef.current = amount;
+        panel1BetModeRef.current = activeMode;
+      }
     } else {
       setPanel2Placed(true);
       setPanel2Cashed(false);
       setPanel2BetVal(amount);
-      panel2ActiveBetRef.current = amount;
+      if (isNextRound) {
+        panel2NextRoundBetRef.current = amount;
+        panel2NextRoundBetModeRef.current = activeMode;
+      } else {
+        panel2ActiveBetRef.current = amount;
+        panel2BetModeRef.current = activeMode;
+      }
     }
+    return true;
   };
 
   const handleBetCancelled = (panelId: string, amount: number) => {
     // Refund the balance!
+    balanceRef.current = parseFloat((balanceRef.current + amount).toFixed(2));
     setBalance(prev => parseFloat((prev + amount).toFixed(2)));
     if (panelId === 'panel1') {
       setPanel1BetVal(0);
       panel1ActiveBetRef.current = null;
+      panel1NextRoundBetRef.current = null;
+      panel1BetModeRef.current = null;
+      panel1NextRoundBetModeRef.current = null;
     } else {
       setPanel2BetVal(0);
       panel2ActiveBetRef.current = null;
+      panel2NextRoundBetRef.current = null;
+      panel2BetModeRef.current = null;
+      panel2NextRoundBetModeRef.current = null;
     }
   };
 
@@ -804,19 +955,31 @@ export default function App() {
 
     // Add personal wins to ledger
     const betVal = panelId === 'panel1' ? panel1BetVal : panel2BetVal;
+    const mode = panelId === 'panel1' 
+      ? (panel1BetModeRef.current || (authSessionMode === 'real' ? 'real' : 'demo'))
+      : (panel2BetModeRef.current || (authSessionMode === 'real' ? 'real' : 'demo'));
+
     setMyBets(prev => [
       {
         amount: betVal,
         multiplier: finalMult,
         payout: cashPayout,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'WON'
+        status: 'WON',
+        mode
       },
       ...prev
     ]);
 
+    // Clear bet mode refs
+    if (panelId === 'panel1') {
+      panel1BetModeRef.current = null;
+    } else {
+      panel2BetModeRef.current = null;
+    }
+
     // Trigger Big Win Celebration Overlay if multiplier >= 5.0x!
-    if (finalMult >= 5.0) {
+    if (finalMult >= 5.0 && !bothBetsPlacedInRoundRef.current) {
       setBigWinOverlay({ multiplier: finalMult, amount: cashPayout });
     }
   };
@@ -842,6 +1005,23 @@ export default function App() {
       referenceCode: 'BONUS-APP-1K',
       status: 'SUCCESS'
     });
+  };
+
+  const handleRefill = (amount: number) => {
+    setBalance(prev => parseFloat((prev + amount).toFixed(2)));
+    addTransaction({
+      amount,
+      type: authSessionMode === 'real' ? 'deposit' : 'bonus_credit',
+      currency: 'KSh',
+      method: authSessionMode === 'real' ? 'M-Pesa Express' : 'Demo Refill',
+      referenceCode: 'REFILL-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+      status: 'SUCCESS'
+    });
+    triggerNotification(
+      '💸 BALANCE REFILLED',
+      `Your balance has been successfully refilled with +${amount.toLocaleString()} KSh!`,
+      authSessionMode === 'real' ? 'deposit' : 'bonus'
+    );
   };
 
   const handleWithdrawSuccess = (cashAmount: number) => {
@@ -1066,6 +1246,7 @@ export default function App() {
           userProfile={userProfile}
           onOpenProfile={() => setIsProfileOpen(true)}
           onOpenDownloadApp={() => setIsDownloadAppOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
 
         {/* Alert Notifications Center pop-down drawer overlays */}
@@ -1108,20 +1289,12 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => {
-                sessionStorage.removeItem('casinohub_session_authenticated');
-                setAuthSessionMode(null);
-                triggerNotification(
-                  '🔒 SESSION LOCKED',
-                  'You have locked your live session. Enter your pass PIN to resume!',
-                  'general'
-                );
-              }}
-              className="px-2.5 py-1.5 rounded bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-900/30 hover:border-red-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
-              title="Lock Current Session"
+              onClick={() => setIsProfileOpen(true)}
+              className="px-2.5 py-1.5 rounded bg-purple-950/20 hover:bg-purple-900/30 text-purple-400 border border-purple-900/30 hover:border-purple-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
+              title="Open Account Profile Detail"
             >
-              <span className="text-[11px]">🔑</span>
-              <span>Lock</span>
+              <span className="text-[11px]">👤</span>
+              <span>Profile</span>
             </button>
           </div>
         </div>
@@ -1169,6 +1342,8 @@ export default function App() {
                 onBetPlaced={(amt) => handleBetPlaced('panel1', amt)}
                 onCashOut={(mult, payout) => handleCashOut('panel1', mult, payout)}
                 onBetCancelled={(amt) => handleBetCancelled('panel1', amt)}
+                onRefill={handleRefill}
+                isDemo={authSessionMode === 'demo'}
               />
 
               <AviatorBetPanel 
@@ -1184,18 +1359,21 @@ export default function App() {
                 onBetPlaced={(amt) => handleBetPlaced('panel2', amt)}
                 onCashOut={(mult, payout) => handleCashOut('panel2', mult, payout)}
                 onBetCancelled={(amt) => handleBetCancelled('panel2', amt)}
+                onRefill={handleRefill}
+                isDemo={authSessionMode === 'demo'}
               />
             </div>
 
             {/* MULTIPLAYER LOBBY STATISTICS AND PERSISTENT LEDGER BOARDS */}
             <div className="flex-1 bg-[#0d0e10] p-3 pt-0 flex flex-col justify-end">
               <BetsLedger 
-                myBets={myBets}
+                myBets={myBets.filter(bet => (bet.mode || 'demo') === (authSessionMode === 'real' ? 'real' : 'demo'))}
                 activePlayers={activePlayers}
                 crashActive={crashActive}
                 crashMultiplier={crashMultiplier}
                 multipliers={historyList}
                 roundIndex={roundIndex}
+                userProfile={userProfile}
               />
             </div>
           </>
@@ -1215,6 +1393,7 @@ export default function App() {
               gameOfTheWeek={gameOfTheWeek}
               userProfile={userProfile}
               authSessionMode={authSessionMode}
+              setUserProfile={setUserProfile}
             />
           </div>
         )}
@@ -1256,12 +1435,14 @@ export default function App() {
         )}
 
         {/* Interactive Download Mobile Client package Overlay */}
-        <DownloadAppModal 
-          isOpen={isDownloadAppOpen}
-          onClose={() => setIsDownloadAppOpen(false)}
-          onCreditWallet={handleAppInstallBonus}
-          triggerNotification={triggerNotification}
-        />
+        {isDownloadAppOpen && (
+          <DownloadAppModal 
+            isOpen={isDownloadAppOpen}
+            onClose={() => setIsDownloadAppOpen(false)}
+            onCreditWallet={handleAppInstallBonus}
+            triggerNotification={triggerNotification}
+          />
+        )}
 
         {/* Responsible Gaming & Player Safety Settings Panel */}
         {isResponsibleGamingOpen && (
@@ -1289,7 +1470,79 @@ export default function App() {
           onClose={() => setIsProfileOpen(false)}
           onSignOut={handleSignOut}
           triggerNotification={triggerNotification}
+          transactions={transactions}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
+
+        {/* Global Player Settings Menu Modal */}
+        <SettingsModal 
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          userProfile={userProfile}
+          setUserProfile={setUserProfile}
+          muted={muted}
+          onToggleMute={handleToggleMute}
+          triggerNotification={triggerNotification}
+        />
+
+        {/* Switch mode safety assurance overlay warning */}
+        {switchModeTargetState && (
+          <div id="switch-mode-confirm-overlay" className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn select-none">
+            <div id="switch-mode-confirm-card" className="w-full max-w-sm bg-[#141518] border border-zinc-800 rounded-2xl p-5 shadow-[0_0_60px_rgba(0,0,0,0.9)] text-center space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center">
+                <AlertOctagon className="w-8 h-8 text-amber-500 animate-pulse" />
+              </div>
+              
+              <div className="space-y-1.5">
+                <h3 className="text-base font-black text-white uppercase tracking-wider">
+                  Confirm Account Switch
+                </h3>
+                <p className="text-xs text-[#a3a5ae] leading-relaxed px-1">
+                  {switchModeTargetState === 'real' ? (
+                    <span>
+                      You are about to switch to your <strong className="text-[#00e600]">REAL BALANCE COFFER</strong>. Bets placed in this mode are real cash transactions!
+                    </span>
+                  ) : (
+                    <span>
+                      You are about to switch to <strong className="text-purple-400">DEMO PRACTICE COFFER</strong>. Play is risk-free for fun & strategy tests.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="bg-black/35 p-3 rounded-lg border border-zinc-800/60 text-left">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black block">New Mode:</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`w-2.5 h-2.5 rounded-full ${switchModeTargetState === 'real' ? 'bg-[#00e600] animate-pulse' : 'bg-purple-400'}`}></span>
+                  <span className="text-xs font-black text-rose-100 uppercase tracking-tight">
+                    {switchModeTargetState === 'real' ? 'Real Play (KSh Wallet)' : 'Demo Play (Free Practice)'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSwitchModeTargetState(null)}
+                  className="py-2.5 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeToggleAuthSessionMode(switchModeTargetState)}
+                  className={`py-2.5 font-black text-xs uppercase tracking-wider rounded-xl cursor-pointer border shadow-sm transition-all active:scale-[0.97] ${
+                    switchModeTargetState === 'real'
+                      ? 'bg-emerald-950/40 border-emerald-500/40 hover:bg-[#00e600]/20 text-[#00e600]'
+                      : 'bg-purple-950/40 border-purple-500/40 hover:bg-purple-600/20 text-purple-300'
+                  }`}
+                >
+                  Confirm Switch
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* BIG WIN CELEBRATION OVERLAY */}
         <AnimatePresence>
