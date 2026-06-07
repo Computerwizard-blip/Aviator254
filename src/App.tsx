@@ -642,10 +642,45 @@ export default function App() {
   const gamePhaseRef = useRef<'lobby' | 'flight' | 'crashed' | null>(null);
   const currentRoundIndexRef = useRef<number>(-1);
 
+  // Helper to get adjusted/capped round limit based on active real bets
+  const getCurrentRoundLimit = (index: number) => {
+    const baseLimit = getRoundLimit(index);
+    let maxAllowed = Infinity;
+
+    const checkBet = (amount: number, mode: 'demo' | 'real' | null) => {
+      const isReal = mode === 'real' || (mode === null && authSessionMode === 'real');
+      if (isReal) {
+        if (amount === 10) {
+          maxAllowed = Math.min(maxAllowed, 5.0);
+        } else if (amount === 20) {
+          maxAllowed = Math.min(maxAllowed, 4.0);
+        } else if (amount === 30) {
+          maxAllowed = Math.min(maxAllowed, 3.0);
+        } else if (amount === 40) {
+          maxAllowed = Math.min(maxAllowed, 2.0);
+        } else if (amount >= 50) {
+          maxAllowed = Math.min(maxAllowed, 2.0);
+        }
+      }
+    };
+
+    if (panel1ActiveBetRef.current !== null && panel1ActiveBetRef.current > 0) {
+      checkBet(panel1ActiveBetRef.current, panel1BetModeRef.current);
+    }
+    if (panel2ActiveBetRef.current !== null && panel2ActiveBetRef.current > 0) {
+      checkBet(panel2ActiveBetRef.current, panel2BetModeRef.current);
+    }
+
+    if (maxAllowed !== Infinity && baseLimit > maxAllowed) {
+      return parseFloat(Math.min(baseLimit, maxAllowed).toFixed(2));
+    }
+    return baseLimit;
+  };
+
   // Helper: setup simulated other players bets at start of lobby
   const generateSimulatedLobbyBettors = (roundIndex: number) => {
     const rand = Math.random;
-    const limit = getRoundLimit(roundIndex);
+    const limit = getCurrentRoundLimit(roundIndex);
     
     // a maximum of 1500 to 2500 in starting
     const maxStart = Math.floor(rand() * (2500 - 1500 + 1)) + 1500;
@@ -787,7 +822,7 @@ export default function App() {
     const handleGameLoopTick = () => {
       const now = Date.now();
       const elapsed = now - phaseStartTimeRef.current;
-      const limit = getRoundLimit(roundIndex);
+      const limit = getCurrentRoundLimit(roundIndex);
 
       // Determine flight duration smoothly scaled
       let flightDuration = 5000;

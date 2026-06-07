@@ -52,8 +52,14 @@ export default function AviatorBetPanel({
 
   const isStakeLocked = isPlaced && !hasCashedOut && !isWaitingNextRound;
 
-  // Quick stake buttons from photographs
-  const quickStakes = [100, 200, 500, 10000];
+  // Quick stake buttons with custom ordered formats
+  const quickStakes = [
+    { value: 10, label: "10.00" },
+    { value: 100, label: "100.00" },
+    { value: 1000, label: "1000.00" },
+    { value: 10000, label: "10,000.00" },
+    { value: 100000, label: "100000" }
+  ];
 
   // Sync state betAmount with text input representation
   useEffect(() => {
@@ -134,7 +140,7 @@ export default function AviatorBetPanel({
       if (isDemo) {
         setShowRefillPrompt(true);
       } else {
-        setPanelError("Low Balance! Please make a deposit of KSh 100+");
+        setPanelError("please make a deposit of a minimum 100ksh");
         setTimeout(() => setPanelError(''), 4000);
       }
       return;
@@ -184,7 +190,7 @@ export default function AviatorBetPanel({
       if (isDemo) {
         setShowRefillPrompt(true);
       } else {
-        setPanelError("Low Balance! Please make a deposit of KSh 100+");
+        setPanelError("please make a deposit of a minimum 100ksh");
         setTimeout(() => setPanelError(''), 4000);
       }
       return;
@@ -450,16 +456,16 @@ export default function AviatorBetPanel({
           </div>
 
           {/* Underlying Quick Stake Buttons */}
-          <div className="grid grid-cols-4 gap-1 select-none">
-            {quickStakes.map((stake) => (
+          <div className="grid grid-cols-5 gap-0.5 select-none">
+            {quickStakes.map((item) => (
               <button 
-                key={stake}
+                key={item.value}
                 type="button"
                 disabled={isStakeLocked}
-                onClick={() => handleQuickStakeClick(stake)}
-                className={`py-1 rounded bg-[#1c1d22] hover:bg-[#282a32] border border-[#25282f] text-[10px] font-mono font-black select-none text-gray-300 hover:text-white transition-all duration-150 disabled:opacity-30 cursor-pointer active:scale-90`}
+                onClick={() => handleQuickStakeClick(item.value)}
+                className={`py-1 rounded bg-[#1c1d22] hover:bg-[#282a32] border border-[#25282f] text-[8.5px] xxs:text-[9.5px] font-mono font-black select-none text-gray-300 hover:text-white transition-all duration-150 disabled:opacity-30 cursor-pointer active:scale-90`}
               >
-                {stake.toLocaleString()}
+                {item.label}
               </button>
             ))}
           </div>
