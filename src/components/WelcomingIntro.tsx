@@ -114,16 +114,8 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
 
   // Retrieve existing account if any on render
   useEffect(() => {
-    const savedAccount = localStorage.getItem('casinohub_registered_account');
-    const isUnlockedSession = sessionStorage.getItem('casinohub_session_authenticated') === 'true';
-
-    if (savedAccount) {
-      if (!isUnlockedSession) {
-        setScreen('lock'); // Lock app until the password is correct
-      }
-    } else {
-      setScreen('welcome');
-    }
+    // Always default to the onboarding welcome dashboard so new and returning users have a friendly start
+    setScreen('welcome');
   }, []);
 
   // Saved user lookup helper
@@ -891,7 +883,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
               <button 
                 onClick={() => {
                   const account = getSavedUser();
-                  setScreen(account ? 'lock' : 'welcome');
+                  setScreen(account ? 'login' : 'welcome');
                 }}
                 className="p-1 px-2.5 rounded bg-white/5 text-gray-400 hover:text-white transition-colors"
               >
