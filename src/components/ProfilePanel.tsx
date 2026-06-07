@@ -17,7 +17,103 @@ interface ProfilePanelProps {
   triggerNotification: (title: string, message: string, type: 'deposit' | 'withdrawal' | 'bonus' | 'jackpot' | 'tournament' | 'vip' | 'general') => void;
   transactions?: Transaction[];
   onOpenSettings?: () => void;
+  onToggleAuthSessionMode?: () => void;
 }
+
+export const VIP_DETAILS: Record<UserProfile['vipLevel'], {
+  bgGradient: string;
+  textColor: string;
+  borderColor: string;
+  glowColor: string;
+  accentColor: string;
+  badgeLabel: string;
+  percentRebate: number;
+  pointsToUnlock: number;
+  benefits: string[];
+}> = {
+  Bronze: {
+    bgGradient: "from-[#8a5737] via-[#a3704c] to-[#8a5737]",
+    textColor: "text-[#fce4d6]",
+    borderColor: "border-[#a3704c]/60",
+    glowColor: "rgba(138,87,55,0.4)",
+    accentColor: "text-[#b07d62]",
+    badgeLabel: "Bronze Veteran",
+    percentRebate: 2,
+    pointsToUnlock: 0,
+    benefits: ["2% Coffer Commissions Cashback", "Standard multiplier wagering", "Daily free play faucet refill", "Standard chat assistance"]
+  },
+  Silver: {
+    bgGradient: "from-[#4a4e69] via-[#9a8c98] to-[#4a4e69]",
+    textColor: "text-slate-100",
+    borderColor: "border-slate-400/50",
+    glowColor: "rgba(154,140,152,0.4)",
+    accentColor: "text-slate-300",
+    badgeLabel: "Silver Vanguard",
+    percentRebate: 5,
+    pointsToUnlock: 500,
+    benefits: ["5% Coffer Commissions Cashback", "1.2x tournament score multiplier", "Access to Aviator AI Support Chat", "Custom profile picture uploads"]
+  },
+  Gold: {
+    bgGradient: "from-[#b8860b] via-[#ffd700] to-[#b8860b]",
+    textColor: "text-yellow-100",
+    borderColor: "border-yellow-400/60",
+    glowColor: "rgba(253,224,71,0.5)",
+    accentColor: "text-yellow-400",
+    badgeLabel: "Gold Centurion",
+    percentRebate: 8,
+    pointsToUnlock: 1500,
+    benefits: ["8% Coffer Commissions Cashback", "KSh 200 Practice Coffer refills", "1.5x VIP Points velocity boost", "Exclusive gold interface glow options"]
+  },
+  Platinum: {
+    bgGradient: "from-[#3a506b] via-[#00b4d8] to-[#3a506b]",
+    textColor: "text-cyan-100",
+    borderColor: "border-cyan-400/60",
+    glowColor: "rgba(0,180,216,0.5)",
+    accentColor: "text-cyan-400",
+    badgeLabel: "Platinum Champion",
+    percentRebate: 12,
+    pointsToUnlock: 3000,
+    benefits: ["12% Coffer Commissions Cashback", "Auto cashout speed optimization", "Dedicated private VIP tournaments", "Fast-track deposit priority routing"]
+  },
+  Diamond: {
+    bgGradient: "from-[#4a00e0] via-[#8e2de2] to-[#f000ff]",
+    textColor: "text-fuchsia-100",
+    borderColor: "border-[#e200f7]/60",
+    glowColor: "rgba(240,0,255,0.6)",
+    accentColor: "text-fuchsia-400 animate-pulse",
+    badgeLabel: "Diamond Sovereign",
+    percentRebate: 15,
+    pointsToUnlock: 5000,
+    benefits: ["15% Coffer Commissions Cashback", "Customizable pilot avatar badges", "24/7 personal customer VIP manager", "Weekly absolute wager rebates"]
+  },
+  Elite: {
+    bgGradient: "from-[#1f1a3a] via-[#e21515] to-[#f59e0b]",
+    textColor: "text-[#fffcf2]",
+    borderColor: "border-red-500/80",
+    glowColor: "rgba(226,21,21,0.7)",
+    accentColor: "text-rose-400 animate-pulse",
+    badgeLabel: "Elite Overlord",
+    percentRebate: 20,
+    pointsToUnlock: 10000,
+    benefits: ["20% Coffer Commissions Cashback", "100% loss-recovery coffer insurance", "Private beta access to custom Aviator algorithms", "Direct priority channel support override"]
+  }
+};
+
+export const getNextVipTier = (currentPoints: number): { tier: string; pointsNeeded: number; progress: number } => {
+  if (currentPoints < 500) {
+    return { tier: 'Silver', pointsNeeded: 500 - currentPoints, progress: (currentPoints / 500) * 100 };
+  } else if (currentPoints < 1500) {
+    return { tier: 'Gold', pointsNeeded: 1500 - currentPoints, progress: ((currentPoints - 500) / 1000) * 100 };
+  } else if (currentPoints < 3000) {
+    return { tier: 'Platinum', pointsNeeded: 3000 - currentPoints, progress: ((currentPoints - 1500) / 1500) * 100 };
+  } else if (currentPoints < 5000) {
+    return { tier: 'Diamond', pointsNeeded: 5000 - currentPoints, progress: ((currentPoints - 3000) / 2000) * 100 };
+  } else if (currentPoints < 10000) {
+    return { tier: 'Elite', pointsNeeded: 10000 - currentPoints, progress: ((currentPoints - 5000) / 5000) * 100 };
+  } else {
+    return { tier: 'Max Level', pointsNeeded: 0, progress: 100 };
+  }
+};
 
 export default function ProfilePanel({
   userProfile,
@@ -28,7 +124,8 @@ export default function ProfilePanel({
   onSignOut,
   triggerNotification,
   transactions,
-  onOpenSettings
+  onOpenSettings,
+  onToggleAuthSessionMode
 }: ProfilePanelProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -245,6 +342,14 @@ export default function ProfilePanel({
   const referralCode = userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`;
 
   const handleCopyCode = () => {
+    if (authSessionMode === 'demo') {
+      triggerNotification(
+        '🔒 Live Referrals Disabled',
+        'Demo practice profiles cannot distribute referrals. Click "Sign In for Real Account" to register and start earning!',
+        'general'
+      );
+      return;
+    }
     navigator.clipboard.writeText(referralCode);
     setCopiedCode(true);
     triggerNotification(
@@ -255,14 +360,28 @@ export default function ProfilePanel({
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const hasActiveRealSession = authSessionMode === 'demo' && 
+    sessionStorage.getItem('casinohub_session_authenticated') === 'true' && 
+    !!localStorage.getItem('casinohub_registered_account');
+
   const handleSignOutClick = () => {
     if (!confirmSignOut) {
       setConfirmSignOut(true);
-      triggerNotification(
-        '⚠️ Sign Out Pending',
-        'Please tap "CLICK AGAIN TO SIGN OUT" within 4 seconds to secure log out.',
-        'general'
-      );
+      if (hasActiveRealSession) {
+        triggerNotification(
+          '🟢 RETURN TO REAL PLAY',
+          'Please tap "CLICK AGAIN TO RETURN" within 4 seconds to switch back to your active Real Play coins coffer instantly!',
+          'vip'
+        );
+      } else {
+        triggerNotification(
+          authSessionMode === 'demo' ? '📶 SIGN IN REQUESTED' : '⚠️ Sign Out Pending',
+          authSessionMode === 'demo'
+            ? 'Please tap "CLICK AGAIN TO SIGN IN" to navigate back to the real play login screen.'
+            : 'Please tap "CLICK AGAIN TO SIGN OUT" within 4 seconds to secure log out.',
+          'general'
+        );
+      }
       if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
       confirmTimeoutRef.current = setTimeout(() => {
         setConfirmSignOut(false);
@@ -270,7 +389,12 @@ export default function ProfilePanel({
     } else {
       if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
       setConfirmSignOut(false);
-      onSignOut();
+      if (hasActiveRealSession && onToggleAuthSessionMode) {
+        onClose();
+        onToggleAuthSessionMode();
+      } else {
+        onSignOut();
+      }
     }
   };
 
@@ -308,29 +432,59 @@ export default function ProfilePanel({
             Aviator Safe Profile
           </span>
 
-          <div className="flex items-center gap-4 mt-3">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#e21515] to-[#ff4747] flex items-center justify-center font-black text-2xl text-white shadow-[0_0_20px_rgba(226,21,21,0.4)] overflow-hidden">
-                {userProfile.avatar && (userProfile.avatar.startsWith('data:image/') || userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
-                  <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-                ) : (
-                  userProfile.avatar || userProfile.username.substring(0, 2).toUpperCase()
-                )}
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-500 rounded-full border-2 border-[#141518] flex items-center justify-center shadow-lg">
-                <Crown className="w-3.5 h-3.5 text-[#141518]" />
-              </div>
-            </div>
+          {/* Header User Profile Information with Luxury VIP gradients */}
+          {(() => {
+            const vipData = VIP_DETAILS[userProfile.vipLevel] || VIP_DETAILS.Silver;
+            return (
+              <div className="flex items-center gap-4 mt-3">
+                <div className="relative">
+                  <div 
+                    className={`w-16 h-16 rounded-full bg-gradient-to-r ${vipData.bgGradient} p-0.5 flex items-center justify-center overflow-hidden transition-all duration-300`}
+                    style={{ 
+                      boxShadow: `0 0 16px ${vipData.glowColor}`
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-[#141518] flex items-center justify-center overflow-hidden">
+                      <div className="w-full h-full flex items-center justify-center font-black text-2xl text-white">
+                        {userProfile.avatar && (userProfile.avatar.startsWith('data:image/') || userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
+                          <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                        ) : (
+                          userProfile.avatar || userProfile.username.substring(0, 2).toUpperCase()
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div 
+                    className={`absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-r ${vipData.bgGradient} rounded-full border border-[#141518] flex items-center justify-center shadow-lg transition-all duration-300`}
+                    style={{ 
+                      boxShadow: `0 0 8px ${vipData.glowColor}`
+                    }}
+                  >
+                    <Crown className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </div>
 
-            <div className="space-y-1 text-left">
-              <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-1.5">
-                <span>{userProfile.fullName || 'Frank Janal'}</span>
-              </h3>
-              <p className="text-xs text-red-500 font-mono font-bold">
-                @{userProfile.username}
-              </p>
-            </div>
-          </div>
+                <div className="space-y-1.5 text-left flex-1">
+                  <div className="flex flex-col gap-0.5">
+                    <h3 className="text-base font-black text-white uppercase tracking-tight leading-snug">
+                      {userProfile.fullName || 'Frank Janal'}
+                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-red-500 font-mono font-bold">
+                        @{userProfile.username}
+                      </span>
+                      
+                      {/* Premium Aesthetic Mini Badge */}
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-widest bg-gradient-to-r ${vipData.bgGradient} ${vipData.textColor} border ${vipData.borderColor} shadow-[0_0_8px_${vipData.glowColor}] transition-all duration-300`}>
+                        <Crown className="w-2.5 h-2.5 text-white shrink-0" />
+                        <span>{vipData.badgeLabel}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Content Container */}
@@ -381,10 +535,15 @@ export default function ProfilePanel({
                   <Award className="w-3.5 h-3.5" />
                   <span>VIP Rank Tier</span>
                 </div>
-                <span className="text-yellow-500 font-extrabold flex items-center gap-1">
-                  <Crown className="w-3 h-3 text-yellow-500" />
-                  <span>{userProfile.vipLevel}</span>
-                </span>
+                {(() => {
+                  const vipData = VIP_DETAILS[userProfile.vipLevel] || VIP_DETAILS.Silver;
+                  return (
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-black text-[9.5px] uppercase tracking-wider bg-gradient-to-r ${vipData.bgGradient} ${vipData.textColor} border ${vipData.borderColor} shadow-[0_0_8px_${vipData.glowColor}]`}>
+                      <Crown className="w-3 h-3 text-white" />
+                      <span>{userProfile.vipLevel}</span>
+                    </span>
+                  );
+                })()}
               </div>
 
               <div className="bg-black/25 px-4 py-3 rounded-lg flex items-center justify-between border border-[#1d1f24]">
@@ -396,6 +555,108 @@ export default function ProfilePanel({
               </div>
             </div>
           </div>
+
+          {/* VIP Benefits & Tier Progress Segment */}
+          {(() => {
+            const vipData = VIP_DETAILS[userProfile.vipLevel] || VIP_DETAILS.Silver;
+            const nextVip = getNextVipTier(userProfile.vipPoints || 0);
+            return (
+              <div className="bg-gradient-to-b from-[#191921] to-[#121216] border border-zinc-800 p-4 rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Crown className={`w-4 h-4 ${vipData.accentColor}`} />
+                    <h5 className="text-xs font-black text-rose-100 uppercase tracking-tight">VIP Benefits & Levels</h5>
+                  </div>
+                  <span className="text-[9px] text-gray-500 font-mono font-bold uppercase">
+                    {(userProfile.vipPoints || 0).toLocaleString()} pts
+                  </span>
+                </div>
+
+                {/* Progress to Next Tier */}
+                {nextVip.tier !== 'Max Level' ? (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] text-gray-400">
+                      <span>Progress to <strong className="text-white">{nextVip.tier}</strong></span>
+                      <span className="font-mono font-bold">{(userProfile.vipPoints || 0)} / {VIP_DETAILS[nextVip.tier as UserProfile['vipLevel']]?.pointsToUnlock || 0} pts</span>
+                    </div>
+                    <div className="relative w-full h-2 bg-black/40 rounded-full overflow-hidden border border-zinc-900">
+                      <div 
+                        className={`absolute inset-y-0 left-0 bg-gradient-to-r ${vipData.bgGradient} rounded-full transition-all duration-500`}
+                        style={{ width: `${Math.min(100, Math.max(5, nextVip.progress))}%`, boxShadow: `0 0 10px ${vipData.glowColor}` }}
+                      ></div>
+                    </div>
+                    <p className="text-[9px] text-[#8e9099] leading-tight text-left">
+                      Accumulate <strong className="text-amber-400 font-mono">{nextVip.pointsNeeded} more points</strong> by placing flying stakes in game to unlock the next prestige rank!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-[#0e160e] border border-emerald-500/25 p-2.5 rounded-lg text-center shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+                    <p className="text-[10px] text-emerald-400 font-black uppercase tracking-wider">
+                      🏆 Max level elite OVERLORD achieved
+                    </p>
+                  </div>
+                )}
+
+                {/* VIP Tiers Interactive Breakdown */}
+                <div className="space-y-2.5 text-left pt-2.5 border-t border-zinc-800/60">
+                  <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest block">VIP Tier Benefits Breakdown:</span>
+                  
+                  <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800/40">
+                    {(Object.keys(VIP_DETAILS) as Array<UserProfile['vipLevel']>).map((lvl) => {
+                      const details = VIP_DETAILS[lvl];
+                      const isActive = userProfile.vipLevel === lvl;
+                      const pointsNeededForThis = details.pointsToUnlock;
+                      const isUnlocked = (userProfile.vipPoints || 0) >= pointsNeededForThis || isActive;
+                      
+                      return (
+                        <div 
+                          key={lvl}
+                          className={`relative border rounded-lg p-3 transition-all duration-300 ${
+                            isActive 
+                              ? `bg-gradient-to-br from-[#1c1d22] to-black ${details.borderColor} shadow-[0_0_12px_${details.glowColor}]` 
+                              : isUnlocked 
+                                ? 'bg-black/15 border-zinc-900 opacity-80 hover:opacity-100'
+                                : 'bg-black/40 border-[#1f2025] opacity-40 hover:opacity-75'
+                          }`}
+                        >
+                          {/* Active tag banner */}
+                          {isActive && (
+                            <div className={`absolute top-2.5 right-2 text-white inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-widest bg-gradient-to-r ${details.bgGradient} ${details.textColor} border ${details.borderColor} animate-pulse`}>
+                              Active
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 mb-1.5 font-sans">
+                            <span className={`w-2.5 h-2.5 rounded-full bg-gradient-to-br ${details.bgGradient}`} />
+                            <span className={`text-[11px] font-black uppercase tracking-wider ${isActive ? details.textColor : 'text-gray-350'}`}>
+                              {lvl} Status
+                            </span>
+                            {!isUnlocked && (
+                              <span className="text-[8px] text-gray-500 font-bold font-mono">
+                                (Locked: {pointsNeededForThis} pts)
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Benefits list */}
+                          <ul className="space-y-1 pl-1 font-sans">
+                            {details.benefits.map((benefit, bidx) => (
+                              <li key={bidx} className="flex items-start gap-1.5 text-[9.5px] text-gray-400">
+                                <span className={`text-[10px] flex-shrink-0 mt-0.5 ${isActive ? details.textColor : 'text-gray-500'}`}>
+                                  ✓
+                                </span>
+                                <span>{benefit}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Deposits, Withdrawals & Transaction History */}
           <div className="space-y-3">
@@ -479,26 +740,44 @@ export default function ProfilePanel({
                 🏷️ Bottom Referral Promotion
               </span>
               <h5 className="text-xs font-black text-rose-100 uppercase tracking-tight">Your Promo Code</h5>
-              <p className="text-[10px] text-gray-400 leading-normal text-left">
-                Keep track of this unique bottom referral token. Copy and share it to instantly claim a <strong className="text-amber-400">10% deposit commission</strong> cash back on all player reloads!
-              </p>
+              {authSessionMode === 'demo' ? (
+                <p className="text-[10px] text-[#ffbf43] leading-normal text-left font-medium">
+                  🔒 Affiliate campaigns are only active on real accounts. In Demo practice, codes are simulation assets.
+                </p>
+              ) : (
+                <p className="text-[10px] text-gray-400 leading-normal text-left">
+                  Keep track of this unique bottom referral token. Copy and share it to instantly claim a <strong className="text-amber-400">10% deposit commission</strong> cash back on all player reloads!
+                </p>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <input 
-                type="text"
-                readOnly
-                value={referralCode}
-                className="flex-1 text-center bg-black/55 border border-amber-500/20 rounded-lg p-2 font-mono font-black text-xs text-amber-400 outline-none uppercase"
-              />
-              <button 
-                onClick={handleCopyCode}
-                className="p-2 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-lg select-none transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
-                title="Copy referral promo code"
-              >
-                {copiedCode ? <Check className="w-4 h-4 text-black" /> : <Copy className="w-4 h-4 text-black" />}
-              </button>
-            </div>
+            {authSessionMode === 'demo' ? (
+              <div className="space-y-3">
+                <div className="text-center bg-black/40 border border-zinc-800 rounded-lg p-2 font-mono font-black text-xs text-zinc-500 uppercase select-none tracking-wider">
+                  {referralCode}
+                </div>
+                <div className="bg-black/50 p-2.5 rounded-lg border border-amber-500/10 text-[9.5px] leading-relaxed text-gray-300">
+                  <span className="font-bold text-amber-400 uppercase tracking-wider block mb-1">💡 How Referrals Work:</span>
+                  When new players register their accounts using your promo code, they become permanently linked to your profile to track commissions. Every time they make an M-Pesa deposit to reload their coins, you instantly earn a <strong className="text-white font-extrabold">10% cash commission</strong> cash back credited directly to your balance coffer!
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text"
+                  readOnly
+                  value={referralCode}
+                  className="flex-1 text-center bg-black/55 border border-amber-500/20 rounded-lg p-2 font-mono font-black text-xs text-amber-400 outline-none uppercase"
+                />
+                <button 
+                  onClick={handleCopyCode}
+                  className="p-2 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-extrabold rounded-lg select-none transition-all active:scale-95 cursor-pointer flex items-center justify-center shrink-0"
+                  title="Copy referral promo code"
+                >
+                  {copiedCode ? <Check className="w-4 h-4 text-black" /> : <Copy className="w-4 h-4 text-black" />}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Live AI Support Co-Pilot & Helpdesk Block */}
@@ -529,21 +808,43 @@ export default function ProfilePanel({
         <div className="p-6 bg-black/40 border-t border-[#212327]">
           <button
             onClick={handleSignOutClick}
-            className={`w-full py-3.5 active:scale-95 text-white font-black uppercase text-xs tracking-widest rounded-xl transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2 ${
+            className={`w-full py-3.5 active:scale-95 font-black uppercase text-xs tracking-widest rounded-xl transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2 ${
               confirmSignOut
                 ? 'bg-amber-500 hover:bg-amber-450 text-black shadow-amber-500/20 shadow-xl border-2 border-amber-600/50 animate-pulse'
-                : 'bg-[#e21515] hover:bg-[#ff2020] shadow-red-500/10'
+                : hasActiveRealSession
+                  ? 'bg-[#00e600] text-black hover:bg-emerald-400 shadow-emerald-500/25'
+                  : authSessionMode === 'demo'
+                    ? 'bg-[#00e600] text-black hover:bg-emerald-400 shadow-emerald-500/25'
+                    : 'bg-[#e21515] text-white hover:bg-[#ff2020] shadow-red-500/10'
             }`}
           >
             {confirmSignOut ? (
               <>
                 <AlertTriangle className="w-4 h-4 text-black" />
-                <span>Click Again to Sign Out</span>
+                <span>
+                  {hasActiveRealSession
+                    ? 'Click Again to Return'
+                    : authSessionMode === 'demo'
+                      ? 'Click Again to Sign In'
+                      : 'Click Again to Sign Out'}
+                </span>
               </>
             ) : (
               <>
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out Profile</span>
+                {hasActiveRealSession ? (
+                  <Crown className="w-4 h-4 text-black" />
+                ) : authSessionMode === 'demo' ? (
+                  <Crown className="w-4 h-4 text-black" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
+                <span>
+                  {hasActiveRealSession
+                    ? 'Return to Real Play'
+                    : authSessionMode === 'demo'
+                      ? 'Sign In for Real Account'
+                      : 'Sign Out Profile'}
+                </span>
               </>
             )}
           </button>

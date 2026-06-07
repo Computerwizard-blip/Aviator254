@@ -294,6 +294,9 @@ export default function MpesaModal({
                   />
                   <span className="absolute right-3.5 top-3.5 text-xs text-gray-500 font-bold">KSh</span>
                 </div>
+                <p className="text-[9.5px] text-amber-500/80 font-mono mt-1 text-left">
+                  * minimum 100
+                </p>
               </div>
 
               {/* Quick Sum Buttons */}

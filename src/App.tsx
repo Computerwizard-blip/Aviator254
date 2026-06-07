@@ -20,7 +20,7 @@ import NotificationsCenter from './components/NotificationsCenter';
 import WelcomingIntro from './components/WelcomingIntro';
 import ProfilePanel from './components/ProfilePanel';
 import SettingsModal from './components/SettingsModal';
-import { Lock, PhoneCall, ShieldAlert, HeartHandshake, AlertOctagon, Gamepad2, Settings, ListFilter, Bell } from 'lucide-react';
+import { Lock, PhoneCall, ShieldAlert, HeartHandshake, AlertOctagon, Gamepad2, Settings, ListFilter, Bell, WifiOff } from 'lucide-react';
 import { Wallet, UserProfile, JackpotPool, Transaction, NotificationItem } from './types';
 
 // Mock avatar names list for simulated online players
@@ -118,6 +118,27 @@ function getRoundLimit(roundIndex: number) {
 }
 
 export default function App() {
+  // Web online stability check state
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && 'navigator' in window) {
+      return window.navigator.onLine;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Navigation & Workspace views state
   const [currentView, setView] = useState<'aviator' | 'lobby' | 'admin'>('aviator');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -194,6 +215,12 @@ export default function App() {
   };
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    let loginDate = localStorage.getItem('casinohub_login_date');
+    if (!loginDate) {
+      loginDate = new Date().toISOString().split('T')[0];
+      localStorage.setItem('casinohub_login_date', loginDate);
+    }
+
     const baseProfile: UserProfile = {
       username: 'francypendy',
       email: 'francypendy@gmail.com',
@@ -203,7 +230,7 @@ export default function App() {
       currency: 'KSh',
       vipLevel: 'Silver',
       vipPoints: 1240,
-      joinedDate: '2026-01-10',
+      joinedDate: loginDate,
       referralCode: 'REF-FRANCYPENDY-5678'
     };
 
@@ -304,11 +331,31 @@ export default function App() {
   };
 
   const handleToggleAuthSessionMode = () => {
+    // If they are playing in Demo Practice mode, check if their real play session is still authenticated
+    if (authSessionMode === 'demo') {
+      const isAuthenticated = sessionStorage.getItem('casinohub_session_authenticated') === 'true';
+      const hasAccount = localStorage.getItem('casinohub_registered_account');
+
+      if (isAuthenticated && hasAccount) {
+        // They did NOT sign out of their real account! Allow them to toggle back to real play normally via confirmation modal
+        setSwitchModeTargetState('real');
+        return;
+      }
+
+      // Otherwise, return to the landing screen as before
+      sessionStorage.removeItem('casinohub_session_authenticated');
+      setAuthSessionMode(null);
+      setIsProfileOpen(false);
+      setIsDepositOpen(false);
+      return;
+    }
     const targetMode = authSessionMode === 'demo' ? 'real' : 'demo';
     setSwitchModeTargetState(targetMode);
   };
 
   const executeToggleAuthSessionMode = (targetMode: 'real' | 'demo') => {
+    const todayStr = localStorage.getItem('casinohub_login_date') || new Date().toISOString().split('T')[0];
+
     if (targetMode === 'real') {
       // Switch to Real mode
       const saved = localStorage.getItem('casinohub_registered_account');
@@ -325,6 +372,7 @@ export default function App() {
             username: parsed.fullName.toLowerCase().replace(/\s+/g, '_'),
             phone: parsed.phone,
             fullName: parsed.fullName,
+            joinedDate: todayStr,
             referralCode: generatedCode
           }));
           setAuthSessionMode('real');
@@ -349,6 +397,7 @@ export default function App() {
           username: 'frank_janal',
           phone: '0117051321',
           fullName: 'Frank Janal',
+          joinedDate: todayStr,
           referralCode: 'REF-FRANKJANAL-1321'
         }));
         setAuthSessionMode('real');
@@ -365,6 +414,7 @@ export default function App() {
         ...prev,
         username: 'demo_player',
         fullName: 'Demo Player',
+        joinedDate: todayStr,
         referralCode: 'REF-DEMOPLAYER-0000'
       }));
       triggerNotification(
@@ -1043,6 +1093,68 @@ export default function App() {
     }
   }, [isExcluded]);
 
+  if (!isOnline) {
+    return (
+      <div className="min-h-screen bg-[#07080a] text-gray-100 flex flex-col justify-center items-center p-4 relative font-sans">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(226,21,21,0.08)_0%,transparent_70%)] pointer-events-none" />
+        <div className="w-full max-w-md bg-[#131518] rounded-2xl border border-rose-500/20 p-6 flex flex-col gap-6 text-center shadow-[0_15px_50px_rgba(239,68,68,0.1)] relative overflow-hidden">
+          <div className="absolute -top-12 -left-12 w-24 h-24 bg-red-500/5 rounded-full blur-2xl" />
+          <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl" />
+          
+          <div className="mx-auto w-16 h-16 rounded-full bg-rose-950/20 border border-rose-500/40 flex items-center justify-center text-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-pulse">
+            <WifiOff className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-lg font-black uppercase text-white tracking-widest leading-none">Connection Lost</h1>
+            <span className="text-rose-400 text-[9px] font-extrabold uppercase bg-rose-950/35 py-1 px-3.5 rounded-full border border-rose-500/20 inline-block font-sans tracking-wider">
+              Offline Mode Detected
+            </span>
+          </div>
+
+          <p className="text-[11px] text-gray-400 font-medium leading-relaxed px-1">
+            CasinoHub is a real-time multiplayer gaming system and requires a stable online internet connection. The application is locked to prevent desynchronized stakes and to secure your balance coffers.
+          </p>
+
+          <div className="bg-[#0e0f11] p-3.5 rounded-xl border border-[#212328] flex items-center justify-between text-left">
+            <div>
+              <span className="text-[8px] uppercase font-bold text-gray-500 block tracking-wider leading-none mb-0.5">STATUS REPORT</span>
+              <span className="text-[10px] text-rose-300 font-bold">Awaiting server handshake...</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-rose-950/20 px-2.5 py-1 rounded-full border border-rose-950/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+              <span className="text-[9px] font-black uppercase tracking-wider text-rose-400">DISCONNECTED</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined' && 'navigator' in window) {
+                  const status = window.navigator.onLine;
+                  setIsOnline(status);
+                  if (status) {
+                    triggerNotification(
+                      '📶 CONNECTION RESTORED',
+                      'Handshake successful. You are back online!',
+                      'general'
+                    );
+                  }
+                }
+              }}
+              className="w-full py-3 bg-rose-600 hover:bg-rose-500 border border-rose-500/30 text-white text-[10.5px] font-extrabold rounded-xl uppercase tracking-wider transition-all duration-350 shadow-[0_4px_16px_rgba(239,68,68,0.25)] flex items-center justify-center gap-1.5 cursor-pointer leading-none"
+            >
+              <span>Verify & Reconnect</span>
+            </button>
+            <p className="text-[8.5px] text-gray-500 leading-none">
+              Check your Wi-Fi or cellular network settings to resolve this issue automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isExcluded) {
     const end = new Date(selfExcludedUntil!);
     const now = new Date();
@@ -1162,6 +1274,9 @@ export default function App() {
             }, 150);
           }
 
+          const todayStr = new Date().toISOString().split('T')[0];
+          localStorage.setItem('casinohub_login_date', todayStr);
+
           if (mode === 'real') {
             const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
             const cleanPhone = phoneStr.trim().replace(/[^0-9]/g, '');
@@ -1173,6 +1288,7 @@ export default function App() {
               username: name.toLowerCase().replace(/\s+/g, '_'),
               phone: phoneStr,
               fullName: name,
+              joinedDate: todayStr,
               referralCode: generatedCode
             }));
             triggerNotification(
@@ -1185,6 +1301,7 @@ export default function App() {
               ...prev,
               username: 'demo_player',
               fullName: 'Demo Player',
+              joinedDate: todayStr,
               referralCode: 'REF-DEMOPLAYER-0000'
             }));
             triggerNotification(
@@ -1472,6 +1589,7 @@ export default function App() {
           triggerNotification={triggerNotification}
           transactions={transactions}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onToggleAuthSessionMode={handleToggleAuthSessionMode}
         />
 
         {/* Global Player Settings Menu Modal */}

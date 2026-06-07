@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, User, Smartphone, Eye, EyeOff, ShieldCheck, HelpCircle, ArrowLeft, Coins, Compass, Gift, Search } from 'lucide-react';
+import { Lock, User, Smartphone, Eye, EyeOff, ShieldCheck, HelpCircle, ArrowLeft, Coins, Compass, Gift, Search, Wifi, Signal } from 'lucide-react';
 import { COUNTRIES_LIST, Country } from '../utils/countries';
 
 interface WelcomingIntroProps {
@@ -37,6 +37,75 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
 
   // General errors
   const [formError, setFormError] = useState('');
+  const [isPhoneAlreadyExists, setIsPhoneAlreadyExists] = useState(false);
+
+  // Real-time network diagnostic states
+  const [isFreeBasicsOrLowDataBlocked, setIsFreeBasicsOrLowDataBlocked] = useState<boolean>(false);
+  const [connectionErrorReason, setConnectionErrorReason] = useState<'DATA_SAVER_ACTIVE' | 'SLOW_2G_CONNECTION' | 'UNEXPECTED_HIGH_LATENCY' | 'OFFLINE' | ''>('');
+  const [isMeasuringConnection, setIsMeasuringConnection] = useState<boolean>(false);
+
+  const performConnectionAudit = async () => {
+    setIsMeasuringConnection(true);
+    try {
+      // 1. Offline Check
+      if (!window.navigator.onLine) {
+        setConnectionErrorReason('OFFLINE');
+        setIsFreeBasicsOrLowDataBlocked(true);
+        return;
+      }
+
+      // 2. Data Saver & Throttled Connection check
+      const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+      if (conn) {
+        if (conn.saveData) {
+          setConnectionErrorReason('DATA_SAVER_ACTIVE');
+          setIsFreeBasicsOrLowDataBlocked(true);
+          return;
+        }
+        if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
+          setConnectionErrorReason('SLOW_2G_CONNECTION');
+          setIsFreeBasicsOrLowDataBlocked(true);
+          return;
+        }
+      }
+
+      // 3. Roundtrip Latency Ping Check
+      const startTime = performance.now();
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1200); // 1.2s timeout representing slow/throttled basic connection
+
+        await fetch('/favicon.ico', { 
+          method: 'HEAD', 
+          cache: 'no-store',
+          signal: controller.signal 
+        });
+        clearTimeout(timeoutId);
+
+        const duration = performance.now() - startTime;
+        if (duration > 1000) {
+          // Extraordinarily high latency representing zero-balance basic tunnels
+          setConnectionErrorReason('UNEXPECTED_HIGH_LATENCY');
+          setIsFreeBasicsOrLowDataBlocked(true);
+        } else {
+          setIsFreeBasicsOrLowDataBlocked(false);
+          setConnectionErrorReason('');
+        }
+      } catch (err) {
+        // High risk blocked network context
+        setConnectionErrorReason('UNEXPECTED_HIGH_LATENCY');
+        setIsFreeBasicsOrLowDataBlocked(true);
+      }
+    } catch (e) {
+      setIsFreeBasicsOrLowDataBlocked(false);
+    } finally {
+      setIsMeasuringConnection(false);
+    }
+  };
+
+  useEffect(() => {
+    performConnectionAudit();
+  }, []);
 
   const filteredCountries = COUNTRIES_LIST.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -89,9 +158,20 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setIsPhoneAlreadyExists(false);
 
     const cleanName = fullName.trim().toLowerCase();
     const cleanPhone = phone.trim().replace(/^0+/, '');
+
+    const account = getSavedUser();
+    if (account) {
+      const cleanSavedPhone = account.phone.trim().replace(/^0+/, '');
+      if (cleanPhone === cleanSavedPhone) {
+        setFormError("account already exist");
+        setIsPhoneAlreadyExists(true);
+        return;
+      }
+    }
 
     if (cleanName !== 'frank janal') {
       setFormError('Account creation blocked. Authorized full name is restricted to "frank janal".');
@@ -127,6 +207,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setIsPhoneAlreadyExists(false);
 
     const account = getSavedUser();
     const targetAccount = account || {
@@ -146,8 +227,8 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
     }
 
     if (password !== targetAccount.password) {
-      // NOTE: Requirement 4: "When someone log with incorrect password don't show him his password, let him press forgot password and go to filling full name and number to unlock password"
-      setFormError('Incorrect password. Please tap "Forgot Password" below to verify and unlock your session.');
+      setFormError('Incorrect password. account already exist');
+      setIsPhoneAlreadyExists(true);
       return;
     }
 
@@ -180,11 +261,11 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
     e.preventDefault();
     setRecoveryError('');
 
-    const account = getSavedUser();
-    if (!account) {
-      setRecoveryError('No account found. Create a new one.');
-      return;
-    }
+    const account = getSavedUser() || {
+      fullName: 'Frank Janal',
+      phone: '0117051321',
+      password: '4298'
+    };
 
     // Verify both full name and phone match exactly
     const matchName = account.fullName.trim().toLowerCase() === recoveryFullName.trim().toLowerCase();
@@ -193,30 +274,89 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
     const cleanAccountPhone = account.phone.trim().replace(/^0+/, '');
     const matchPhone = cleanRecoveryPhone === cleanAccountPhone;
 
-    if (matchName && matchPhone) {
-      if (newPassword.length < 4) {
-        setRecoveryError('New password must be at least 4 characters.');
-        return;
-      }
+    // Verify password matches
+    const matchPassword = account.password === newPassword;
 
-      // Save updated account with new password
-      const updatedAccount = {
-        ...account,
-        password: newPassword
-      };
-      localStorage.setItem('casinohub_registered_account', JSON.stringify(updatedAccount));
+    if (matchName && matchPhone && matchPassword) {
       sessionStorage.setItem('casinohub_session_authenticated', 'true');
-      
-      alert('Password updated successfully! Welcome back.');
-      onLoginSuccess(updatedAccount.fullName, updatedAccount.phone, 'real');
+      alert('Recovery verified successfully! Welcome back.');
+      onLoginSuccess(account.fullName, account.phone, 'real');
     } else {
-      setRecoveryError('Invalid Full Name or Phone Number. Details do not match our system.');
+      if (!matchPhone) {
+        setRecoveryError('Invalid Registered Phone Number.');
+      } else if (!matchName || !matchPassword) {
+        setRecoveryError('The password and name must match to login.');
+      } else {
+        setRecoveryError('Account recovery failed. Details do not match our system.');
+      }
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-[#080310] overflow-y-auto flex items-center justify-center font-sans">
       
+      {/* Programmatic network & bundle diagnostic checker screen */}
+      {isFreeBasicsOrLowDataBlocked && (
+        <div className="absolute inset-0 z-50 bg-[#0d0418]/98 flex flex-col items-center justify-center p-6 text-center select-none">
+          <div className="max-w-sm space-y-6">
+            <div className="w-16 h-16 mx-auto bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400">
+              <Wifi className="w-8 h-8 animate-pulse" />
+            </div>
+            
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded">
+                ⚡ Throttled / Basic Data Mode Detected
+              </span>
+              <h3 className="text-white text-lg font-black uppercase tracking-tight pt-1">
+                Active Data Bundle Required
+              </h3>
+              <p className="text-gray-300 text-xs leading-relaxed">
+                {connectionErrorReason === 'OFFLINE' ? (
+                  "Your device appears to be entirely offline. Please restore Wi-Fi or Cellular network connectivity to loaded servers."
+                ) : connectionErrorReason === 'DATA_SAVER_ACTIVE' ? (
+                  "You have enabled Data Saver Mode. High-speed aviation telemetry animations & automatic M-Pesa client reload synchronization require unconstrained bandwidth to prevent disconnection."
+                ) : (
+                  "We detected a slow 2G connection, zero bundle balance, or Free Basics throttle. Please active standard premium bundle or connect to standard Wi-Fi."
+                )}
+              </p>
+            </div>
+
+            <div className="p-3 bg-purple-950/20 border border-purple-500/15 rounded-xl text-[11px] text-left text-purple-300 leading-normal space-y-1">
+              <strong className="text-white block">Why is this required?</strong>
+              <p>
+                Zero-balance or Free basic text tunnels fail to receive microsecond aircraft coordinates, causing lag-outs, delayed cashout bets, and failed instant payment matches.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={performConnectionAudit}
+                disabled={isMeasuringConnection}
+                className="w-full py-3 bg-[#00e600] hover:bg-emerald-400 disabled:bg-emerald-800 text-black font-extrabold uppercase text-xs tracking-wider rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+              >
+                {isMeasuringConnection ? (
+                  <>
+                    <span className="animate-spin text-sm">⌛</span>
+                    <span>Auditing Line Quality...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄 Re-verify Network & Bunble</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setIsFreeBasicsOrLowDataBlocked(false)}
+                className="w-full py-2 bg-transparent text-gray-500 hover:text-zinc-400 border border-zinc-800 rounded-xl text-[10px] uppercase font-black tracking-widest cursor-pointer transition-all"
+              >
+                Bypass audit (Game may stutter)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Visual background atmospheric elements simulating cockpit deep red glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(226,21,21,0.18)_0%,rgba(8,3,16,1)_75%)] pointer-events-none"></div>
 
@@ -333,8 +473,20 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
             </div>
 
             {formError && (
-              <div className="bg-red-950/40 text-red-400 border border-red-500/20 rounded-xl p-3 text-[10px] leading-relaxed font-mono">
-                ⚠️ {formError}
+              <div className="bg-red-950/40 text-red-400 border border-red-500/20 rounded-xl p-3 text-[10px] leading-relaxed font-mono flex flex-col gap-2">
+                <span>⚠️ {formError}</span>
+                {isPhoneAlreadyExists && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoveryError('');
+                      setScreen('recover');
+                    }}
+                    className="mt-1 px-3 py-2 bg-amber-500/25 hover:bg-amber-500/40 text-amber-300 font-extrabold tracking-wider uppercase text-[10px] rounded-lg border border-amber-500/30 transition-all cursor-pointer text-center"
+                  >
+                    click here to recover your account
+                  </button>
+                )}
               </div>
             )}
 
@@ -506,8 +658,20 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
             </div>
 
             {formError && (
-              <div className="bg-red-950/40 text-red-400 border border-red-500/20 rounded-xl p-3 text-[10px] leading-relaxed font-mono">
-                ⚠️ {formError}
+              <div className="bg-red-950/40 text-red-400 border border-red-500/20 rounded-xl p-3 text-[10px] leading-relaxed font-mono flex flex-col gap-2">
+                <span>⚠️ {formError}</span>
+                {isPhoneAlreadyExists && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoveryError('');
+                      setScreen('recover');
+                    }}
+                    className="mt-1 px-3 py-2 bg-amber-500/25 hover:bg-amber-500/40 text-amber-300 font-extrabold tracking-wider uppercase text-[10px] rounded-lg border border-amber-500/30 transition-all cursor-pointer text-center"
+                  >
+                    click here to recover your account
+                  </button>
+                )}
               </div>
             )}
 
@@ -696,9 +860,10 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                 <button
                   type="button"
                   onClick={handleLaunchDemo}
-                  className="px-4 py-3 bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] font-bold rounded-xl transition-colors uppercase cursor-pointer"
+                  className="px-4 py-3 bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] font-extrabold rounded-xl transition-colors uppercase cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
                 >
-                  Play Demo
+                  <span>Play Demo</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse"></span>
                 </button>
               </div>
             </form>
@@ -833,7 +998,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
 
               <div>
                 <label className="text-[9px] text-amber-400 font-black uppercase tracking-wider block mb-1.5">
-                  Define New Password
+                  Account Password
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 w-4 h-4 text-amber-500/60" />
@@ -843,7 +1008,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full bg-black/40 border border-amber-500/40 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-amber-400"
-                    placeholder="Enter new strong password"
+                    placeholder="Enter your account password"
                   />
                 </div>
               </div>
@@ -853,7 +1018,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                   type="submit"
                   className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-extrabold uppercase text-xs tracking-wider rounded-xl transition-all shadow-lg active:scale-95 cursor-pointer"
                 >
-                  Verify info & Update Password
+                  Verify info & Log In
                 </button>
               </div>
             </form>
