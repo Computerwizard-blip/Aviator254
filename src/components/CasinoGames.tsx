@@ -49,6 +49,7 @@ interface CasinoGamesProps {
   userProfile?: UserProfile;
   authSessionMode?: 'demo' | 'real' | null;
   setUserProfile?: React.Dispatch<React.SetStateAction<UserProfile>>;
+  onLaunchAviator?: () => void;
 }
 
 export const LISTED_GAMES: GameItem[] = [
@@ -105,10 +106,33 @@ export default function CasinoGames({
     joinedDate: '2026-01-10'
   },
   authSessionMode = 'real',
-  setUserProfile
+  setUserProfile,
+  onLaunchAviator = () => {}
 }: CasinoGamesProps) {
   const [selectedGame, setSelectedGame] = useState<GameItem | null>(null);
   const [betAmount, setBetAmount] = useState<number>(10);
+
+  // Automated sliding banner states & ticking jackpot setup
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [ke7Jackpot, setKe7Jackpot] = useState<number>(156183.15);
+  const [selectedSportsOdds, setSelectedSportsOdds] = useState<{[key: string]: boolean}>({});
+
+  useEffect(() => {
+    // 1. Auto slide transition interval timer (4 seconds)
+    const slideTimer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % 5);
+    }, 4000);
+
+    // 2. Continuous jackpot ticking incrementer (randomize fraction delta every 1.5s)
+    const jackpotTimer = setInterval(() => {
+      setKe7Jackpot((prev) => prev + (Math.random() * 0.45 + 0.15));
+    }, 1500);
+
+    return () => {
+      clearInterval(slideTimer);
+      clearInterval(jackpotTimer);
+    };
+  }, []);
 
   // VIP Loyalty Bonus claim state & timer logic
   const [referredList, setReferredList] = useState<{username: string; totalDeposits: number; commission: number; joinedDate: string}[]>(() => {
@@ -529,6 +553,10 @@ export default function CasinoGames({
   };
 
   const handleGameSelect = (game: GameItem) => {
+    if (game.id === 'instant-aviator' || game.id.includes('aviator')) {
+      onLaunchAviator();
+      return;
+    }
     setSelectedGame(game);
     // Prep individual game state as required
     if (game.id === 'instant-mines') {
@@ -1970,7 +1998,150 @@ export default function CasinoGames({
         </div>
       ) : (
         /* STANDARD ALL CATEGORIES LOBBY GAMES LIST GRID CONTAINER */
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
+
+          {/* 1. BRAND CAROUSEL SLIDESHOW ACCENT */}
+          <div className="relative rounded-2xl overflow-hidden min-h-[160px] md:min-h-[200px] bg-gradient-to-br from-[#101115] via-[#1b1c23] to-[#0c0d11] border border-neutral-800 shadow-xl select-none">
+            {/* Slides Mapping */}
+            {(() => {
+              const slides = [
+                {
+                  title: "CLAIM AVIATOR STUDIO RAIN FREEBETS",
+                  subtitle: "ZA KSh 97!",
+                  desc: "Bet na KSh 70 Bob Na Uwe Na Account Balance Ya KSh 50 KES To Claim Free Raindrops!",
+                  badge: "RAIN FREEBETS",
+                  color: "from-red-600 via-rose-750 to-amber-600",
+                  icon: "✈️"
+                },
+                {
+                  title: "FIFA WORLD CUP 2026",
+                  subtitle: "HIGHLIGHT ODDS SPECIAL",
+                  desc: "From 11th June to 19th July 2026. Place your premium sports predictions at KE7.com!",
+                  badge: "SPORTSBOOK LIVE",
+                  color: "from-blue-600 via-[#1e3a8a] to-indigo-600",
+                  icon: "⚽"
+                },
+                {
+                  title: "GET 50% MATCHING BONUS",
+                  subtitle: "ON YOUR FIRST DEPOSIT!",
+                  desc: "Kickstart your real-account casino journey with instant play matches and safe limits!",
+                  badge: "WELCOME BONUS",
+                  color: "from-emerald-600 via-emerald-800 to-teal-600",
+                  icon: "🎁"
+                },
+                {
+                  title: "PASSIVE COFFER MONEY ENGINE",
+                  subtitle: "10% COMMISSION FOREVER",
+                  desc: "Share your code/link and claim a solid 10% cash commission on every deposit friends make!",
+                  badge: "REFERRAL AFFILIATE",
+                  color: "from-amber-600 via-[#d97706] to-yellow-500",
+                  icon: "💎"
+                },
+                {
+                  title: "MEGA JACKPOT LUCKY WHEEL",
+                  subtitle: "SPIN FOR EVERY 50 KES STAKED!",
+                  desc: "Earn an exclusive free lucky wheel multiplier attempt for every KSh 50 wagered in the lobby!",
+                  badge: "GOLDEN ROTATOR",
+                  color: "from-purple-600 via-purple-800 to-pink-600",
+                  icon: "🎡"
+                }
+              ];
+              const slide = slides[currentSlide];
+              return (
+                <div className={`p-6 md:p-8 flex items-center justify-between gap-6 h-full w-full bg-gradient-to-r ${slide.color} transition-all duration-700 ease-in-out relative min-h-[160px] md:min-h-[200px]`}>
+                  {/* Decorative faint background graphics */}
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
+                  <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                  <div className="space-y-2 text-left max-w-xl z-10 select-text font-sans">
+                    <span className="px-2.5 py-0.5 rounded-md bg-black/40 text-yellow-400 border border-yellow-400/30 text-[9px] font-black tracking-widest uppercase inline-block">
+                      {slide.badge}
+                    </span>
+                    <h3 className="text-base sm:text-lg md:text-xl font-black text-white leading-tight uppercase tracking-tight">
+                      {slide.title} <strong className="text-yellow-400 font-black block sm:inline">{slide.subtitle}</strong>
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-neutral-100 max-w-lg leading-relaxed font-sans opacity-95">
+                      {slide.desc}
+                    </p>
+                  </div>
+
+                  <div className="hidden sm:flex items-center justify-center w-24 h-24 rounded-2xl bg-black/25 text-5xl shrink-0 border border-white/10 select-none animate-bounce z-10 shadow-lg">
+                    {slide.icon}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Slider Dots indicators */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+              {[0, 1, 2, 3, 4].map((idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`w-2 h-2 rounded-full transition-all cursor-pointer ${currentSlide === idx ? 'bg-yellow-400 w-4 shadow-md' : 'bg-neutral-600'}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* 2. MEGAPHONE BANNER MARQUEE */}
+          <div className="bg-[#111215] border border-yellow-500/15 rounded-xl px-3.5 py-2 flex items-center gap-2.5 overflow-hidden text-xs text-amber-105 select-none relative z-10 shadow-sm font-sans">
+            <span className="text-yellow-400 font-extrabold shrink-0 text-base animate-pulse">📢</span>
+            <div className="flex-1 overflow-hidden relative h-5 flex items-center">
+              {/* Marquee Ticker */}
+              <div className="whitespace-nowrap flex gap-8 font-mono tracking-wide text-[10px] text-neutral-300 animate-marquee relative">
+                <span>Welcome to www.KE7.com! Minimum cashier deposit is KSh 100 threshold. Placed real stakes generate +30% VIP Loyalty points automatically. Play safe and gamble responsibly. Aviator Studio freebets raindrop promotion is now active! Live customer support channels are open 24/7/365.</span>
+                <span>Welcome to www.KE7.com! Minimum cashier deposit is KSh 100 threshold. Placed real stakes generate +30% VIP Loyalty points automatically. Play safe and gamble responsibly. Aviator Studio freebets raindrop promotion is now active! Live customer support channels are open 24/7/365.</span>
+              </div>
+            </div>
+            
+            {/* Custom CSS injector to guarantee flawless infinite marquee scrolling */}
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes marquee {
+                0% { transform: translateX(0%); }
+                100% { transform: translateX(-50%); }
+              }
+              .animate-marquee {
+                display: flex;
+                width: max-content;
+                animation: marquee 25s linear infinite;
+              }
+            `}} />
+          </div>
+
+          {/* 3. PHYSICAL DIGIT LIVE PROGRESSIVE JACKPOT COUNTER */}
+          <div className="bg-gradient-to-r from-yellow-600/10 via-[#101114] to-yellow-600/10 border-2 border-yellow-500/35 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 select-none relative overflow-hidden shadow-md shadow-yellow-500/5">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-500/5 via-transparent to-transparent pointer-events-none"></div>
+            
+            <div className="flex flex-col gap-1 items-start text-left z-10">
+              <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[9px] font-black tracking-widest uppercase shadow-[0_0_10px_rgba(245,158,11,0.3)]">
+                🏆 GLOBAL TOURNAMENT PROGRESSIVE JACKPOT
+              </span>
+              <span className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 uppercase mt-0.5">
+                NEXT LIVE SPLASH DRAW TIME: <strong className="text-yellow-400 font-black tracking-wide">21:00 EAT</strong>
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></span>
+              </span>
+            </div>
+            
+            {/* Real Ticking Digit Panels */}
+            <div className="flex items-center gap-1 font-mono text-xl md:text-2xl font-black z-10 animate-fadeIn">
+              <span className="text-yellow-400 font-sans tracking-wide text-base uppercase mr-1">KSh</span>
+              {Math.floor(ke7Jackpot).toLocaleString().split('').map((char, idx) => {
+                if (char === ',') {
+                  return <span key={idx} className="text-yellow-500 mx-0.5 font-bold">,</span>;
+                }
+                return (
+                  <span key={idx} className="bg-[#0b0c10] text-[#ffbf00] border-y border-yellow-500/35 rounded-md px-2 py-1 shadow-inner shadow-black font-black text-center min-w-[22px]">
+                    {char}
+                  </span>
+                );
+              })}
+              <span className="text-yellow-500 font-bold">.</span>
+              <span className="bg-[#0b0c10] text-[#ffbf00] border-y border-yellow-500/35 rounded-md px-1.5 py-1 text-base font-black">
+                {ke7Jackpot.toFixed(2).split('.')[1]}
+              </span>
+            </div>
+          </div>
           
           {/* Game of the Week Prominent Premium Showcase */}
           {gameOfTheWeek && (() => {

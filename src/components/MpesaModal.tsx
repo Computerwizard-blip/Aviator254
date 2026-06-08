@@ -41,6 +41,7 @@ export default function MpesaModal({
   const [pastedCode, setPastedCode] = useState('');
   const [pastedReceipt, setPastedReceipt] = useState('');
   const [verificationTimer, setVerificationTimer] = useState(120);
+  const [pasteError, setPasteError] = useState('');
 
   // Live ticking countdown for ledger verification
   React.useEffect(() => {
@@ -434,26 +435,11 @@ export default function MpesaModal({
                   M-Pesa Ledger Verification
                 </h5>
                 <p className="text-[10px] text-gray-400 max-w-[280px] mx-auto leading-normal">
-                  To credit your <strong className="text-white">KSh {parseFloat(amount).toLocaleString()}</strong> deposit, paste the transaction reference code and Safaricom SMS receipt body below.
+                  To credit your <strong className="text-white">KSh {parseFloat(amount).toLocaleString()}</strong> deposit, paste the transaction history or Safaricom SMS receipt body below.
                 </p>
               </div>
 
               <div className="w-full space-y-3">
-                {/* Transaction Code */}
-                <div className="space-y-1 text-left">
-                  <label className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider font-mono">
-                    M-Pesa Transaction Ref Code
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={pastedCode}
-                    onChange={(e) => setPastedCode(e.target.value.toUpperCase().trim())}
-                    placeholder="e.g. RF538XGP91"
-                    className="w-full px-3 py-2 bg-[#0e0f11] border border-zinc-800 rounded-lg text-white font-mono text-xs focus:border-[#00e600] focus:ring-1 focus:ring-[#00e600]/20 outline-none"
-                  />
-                </div>
-
                 {/* SMS Body */}
                 <div className="space-y-1 text-left">
                   <label className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider font-mono">
@@ -461,13 +447,22 @@ export default function MpesaModal({
                   </label>
                   <textarea
                     required
-                    rows={3}
+                    rows={5}
                     value={pastedReceipt}
-                    onChange={(e) => setPastedReceipt(e.target.value)}
-                    placeholder="e.g. KFR13TGHB5 Confirmed. Ksh 1000.00 paid to CasinoHub on 05/06/2026..."
+                    onChange={(e) => {
+                      setPastedReceipt(e.target.value);
+                      if (pasteError) setPasteError('');
+                    }}
+                    placeholder="Paste the full SMS message or transaction receipt here (e.g. KFR13TGHB5 Confirmed. Ksh 1000.00 paid to CasinoHub...)"
                     className="w-full px-3 py-2 bg-[#0e0f11] border border-zinc-800 rounded-lg text-white font-sans text-[10px] leading-relaxed focus:border-[#00e600] outline-none"
                   />
                 </div>
+
+                {pasteError && (
+                  <div className="bg-red-500/10 p-2.5 rounded border border-red-500/30 text-left text-[9.5px] text-red-400 font-medium leading-normal animate-pulse">
+                    🚫 <strong>Verification Warning:</strong> {pasteError}
+                  </div>
+                )}
 
                 <div className="bg-red-500/5 p-2.5 rounded border border-red-500/15 text-left text-[9px] text-red-200 leading-normal">
                   ⚠️ <strong>Security Audit Note:</strong> Our node queries Safaricom's public ledger indexes. Spoofed record patterns or fake codes will flag your cash session instantly.
@@ -484,15 +479,25 @@ export default function MpesaModal({
                   <button
                     type="button"
                     onClick={() => {
-                      if (!pastedCode) {
-                        alert("Please paste the M-Pesa transaction reference code first!");
+                      const cleanText = pastedReceipt.trim();
+                      if (!cleanText) {
+                        setPasteError("Please paste the confirmation SMS record received first!");
                         return;
                       }
-                      if (!pastedReceipt) {
-                        alert("Please paste the confirmation SMS record received first!");
+
+                      // Attempt to automatically extract the 10-character M-Pesa transaction reference code starting with 'L' or 'Q' (case-insensitive)
+                      const mpesaRegex = /\b([LQ][A-Z0-9]{9})\b/i;
+                      const matches = cleanText.match(mpesaRegex);
+                      
+                      if (!matches) {
+                        setPasteError("Invalid M-Pesa confirmation string. Your pasted text must contain a valid 10-character transaction reference code starting with 'L' or 'Q' (e.g., LCT58XGP94 or QFR13TGHB5).");
                         return;
                       }
-                      setVerificationTimer(120); // Reset countdown timer can stay 120 seconds
+
+                      const extractedCode = matches[0].toUpperCase();
+                      setPasteError('');
+                      setPastedCode(extractedCode);
+                      setVerificationTimer(120); // Reset countdown timer to 120 seconds for the node query search
                       setStep('timer');
                     }}
                     className="flex-grow py-2.5 bg-[#00e600] text-black font-black uppercase text-xs rounded shadow-md hover:bg-[#1bf31b] transition-all cursor-pointer text-center"

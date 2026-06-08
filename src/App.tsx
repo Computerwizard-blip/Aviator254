@@ -140,7 +140,7 @@ export default function App() {
   }, []);
 
   // Navigation & Workspace views state
-  const [currentView, setView] = useState<'aviator' | 'lobby' | 'admin'>('aviator');
+  const [currentView, setView] = useState<'aviator' | 'lobby' | 'admin'>('lobby');
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   // Custom Welcoming entrance blocker state
@@ -1546,6 +1546,7 @@ export default function App() {
               userProfile={userProfile}
               authSessionMode={authSessionMode}
               setUserProfile={setUserProfile}
+              onLaunchAviator={() => { setView('aviator'); setIsNotificationsOpen(false); }}
             />
           </div>
         )}
