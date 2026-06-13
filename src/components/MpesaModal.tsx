@@ -34,14 +34,42 @@ export default function MpesaModal({
   const [phoneNumber, setPhoneNumber] = useState('0712345678');
   const [amount, setAmount] = useState('1000');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'form' | 'stk_push' | 'paste_data' | 'timer' | 'claim_award' | 'success'>('form');
+  const [step, setStep] = useState<'form' | 'stk_push' | 'paste_data' | 'timer' | 'claim_award' | 'success' | 'stk_real_push'>('form');
   const [copiedLink, setCopiedLink] = useState(false);
   
+  // Real Safaricom STK Push via Vercel endpoint variables
+  const [useRealSTK, setUseRealSTK] = useState<boolean>(() => {
+    return localStorage.getItem('casinohub_use_real_stk') !== 'false';
+  });
+  const [vercelApiUrl, setVercelApiUrl] = useState<string>(() => {
+    return localStorage.getItem('casinohub_vercel_api_url') || 'https://aviatokenya254.vercel.app/api/sasapay-pay';
+  });
+  const [vercelHeaders, setVercelHeaders] = useState<string>(() => {
+    return localStorage.getItem('casinohub_vercel_headers') || '{\n  "Content-Type": "application/json"\n}';
+  });
+  const [stkPushStep, setStkPushStep] = useState<'idle' | 'calling' | 'waiting' | 'failed' | 'success'>('idle');
+  const [stkErrorMessage, setStkErrorMessage] = useState<string>('');
+  const [formattedPhone, setFormattedPhone] = useState('');
+  const [realStkWaitingSecs, setRealStkWaitingSecs] = useState(45);
+
   // Paste & verification states
   const [pastedCode, setPastedCode] = useState('');
   const [pastedReceipt, setPastedReceipt] = useState('');
   const [verificationTimer, setVerificationTimer] = useState(120);
   const [pasteError, setPasteError] = useState('');
+
+  // Ticking effect for Real Vercel STK PIN Entry window
+  React.useEffect(() => {
+    let interval: any = null;
+    if (step === 'stk_real_push' && stkPushStep === 'waiting' && realStkWaitingSecs > 0) {
+      interval = setInterval(() => {
+        setRealStkWaitingSecs((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, stkPushStep, realStkWaitingSecs]);
 
   // Live ticking countdown for ledger verification
   React.useEffect(() => {
@@ -74,6 +102,82 @@ export default function MpesaModal({
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.dialCode.includes(searchQuery)
   );
+
+  const triggerRealStkPush = async (numAmount: number) => {
+    const dial = selectedCountry.dialCode;
+    let cleanPhone = phoneNumber.replace(/\D/g, '');
+    let finalPhone = cleanPhone;
+    
+    // Convert 07... to 2547... and 01... to 2541... to comply strictly with Safaricom Daraja protocols
+    if (dial === '254' || cleanPhone.startsWith('254')) {
+      if (cleanPhone.startsWith('254')) {
+        finalPhone = cleanPhone;
+      } else if (cleanPhone.startsWith('0')) {
+        finalPhone = '254' + cleanPhone.slice(1);
+      } else if (cleanPhone.length === 9) {
+        finalPhone = '254' + cleanPhone;
+      }
+    }
+    
+    setFormattedPhone(finalPhone);
+    setStkPushStep('calling');
+    setStep('stk_real_push');
+    setStkErrorMessage('');
+    setRealStkWaitingSecs(45);
+
+    let headersObj: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    try {
+      if (vercelHeaders.trim()) {
+        const parsed = JSON.parse(vercelHeaders);
+        headersObj = { ...headersObj, ...parsed };
+      }
+    } catch (e) {
+      console.warn("Could not parse custom JSON headers. Using standard JSON parameters.");
+    }
+
+    // Comprehensive compatible properties wrapping
+    const payload = {
+      phone: finalPhone,
+      phoneNumber: finalPhone,
+      phone_number: finalPhone,
+      amount: numAmount,
+      amountString: String(numAmount),
+      reference: `STK-${Date.now().toString().slice(-6)}`,
+      accountReference: 'CasinoHub_Wallet',
+      AccountReference: 'CasinoHub_Wallet',
+      TransactionDesc: 'Wallet Auto Deposit',
+      desc: 'Wallet Auto Deposit'
+    };
+
+    try {
+      // Avoid CORS "Failed to fetch" blockages by proxying securely via our own server-side Express API
+      const response = await fetch('/api/proxy-stk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          vercelApiUrl: vercelApiUrl.trim(),
+          headers: headersObj,
+          payload: payload
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTPS Error Status: ${response.status} - ${response.statusText}`);
+      }
+
+      await response.json().catch(() => ({}));
+      setStkPushStep('waiting');
+    } catch (error: any) {
+      console.error("Vercel STK Push API request failed:", error);
+      setStkPushStep('failed');
+      setStkErrorMessage(error.message || "Network request failed. Ensure your Vercel API is online and the endpoint URL is correct.");
+    }
+  };
 
   const handleAction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +221,15 @@ export default function MpesaModal({
 
     if (tab === 'deposit' && depositLimit !== null && (totalDepositedToday + num) > depositLimit) {
       alert(`Deposit Limit Violation: You have already deposited ${totalDepositedToday.toLocaleString()} KSh today. This transaction of ${num.toLocaleString()} KSh would exceed your daily self-imposed limit of ${depositLimit.toLocaleString()} KSh.\n\nYou can raise or clear your limits in the Responsible Gaming panel.`);
+      return;
+    }
+
+    if (tab === 'deposit') {
+      if (!vercelApiUrl.trim()) {
+        alert("The payment API endpoint is missing. Please ensure your configuration is active.");
+        return;
+      }
+      triggerRealStkPush(num);
       return;
     }
 
@@ -184,7 +297,7 @@ export default function MpesaModal({
                   <div className="space-y-1">
                     <h5 className="text-purple-300 text-[11px] font-black uppercase tracking-wider">Demo Account Active</h5>
                     <p className="text-[10px] text-gray-400 leading-normal">
-                      Standard sandbox deposits are restricted in Demo mode. Please switch to your real account first!
+                      Real monetary deposits are restricted in Demo mode. Please switch to your real account first!
                     </p>
                   </div>
                   {onToggleAuthMode && (
@@ -319,7 +432,7 @@ export default function MpesaModal({
                 type="submit"
                 className={`w-full py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider cursor-pointer active:scale-95 transition-all select-none ${tab === 'deposit' ? 'bg-[#2cb400] text-white hover:bg-[#34d100]' : 'bg-red-600 text-white hover:bg-red-500'}`}
               >
-                {tab === 'deposit' ? `GENERATE CHECKOUT LINK` : `REQUEST WITHDRAWAL`}
+                {tab === 'deposit' ? 'PAY / DEPOSIT' : 'REQUEST WITHDRAWAL'}
               </button>
 
               {/* Responsible Gaming Quick Link inside Wallet */}
@@ -356,13 +469,16 @@ export default function MpesaModal({
                 <div className="w-full bg-[#0d0e10] p-3.5 rounded-lg border border-[#212327] flex flex-col gap-2">
                   <div className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider block font-mono">Secure Payment URL</div>
                   <div className="bg-[#141518] text-[9.5px] font-mono text-purple-300 p-2 rounded border border-[#24262c] text-left select-all truncate">
-                    https://pay.casinohub.link/mpesa?amt={amount}&tel={phoneNumber}&ref=TX-{Date.now().toString().slice(-4)}
+                    https://aviatokenya254.vercel.app/api/sasapay-pay?amt={amount}&tel={phoneNumber}&ref=TX-{Date.now().toString().slice(-4)}
                   </div>
                   
                   <div className="flex gap-2 pt-1.5">
                     <button
                       type="button"
-                      onClick={() => alert(`Simulated link opened for KSh ${amount}. Please pay on the checkout interface.`)}
+                      onClick={() => {
+                        const payUrl = `https://aviatokenya254.vercel.app/api/sasapay-pay?amt=${amount}&tel=${phoneNumber}`;
+                        window.open(payUrl, '_blank');
+                      }}
                       className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-[10px] uppercase tracking-wider rounded flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -372,7 +488,7 @@ export default function MpesaModal({
                     <button
                       type="button"
                       onClick={() => {
-                        const payUrl = `https://pay.casinohub.link/mpesa?amt=${amount}&tel=${phoneNumber}`;
+                        const payUrl = `https://aviatokenya254.vercel.app/api/sasapay-pay?amt=${amount}&tel=${phoneNumber}`;
                         navigator.clipboard.writeText(payUrl);
                         setCopiedLink(true);
                         setTimeout(() => setCopiedLink(false), 2000);
@@ -421,6 +537,134 @@ export default function MpesaModal({
                 </div>
               </div>
             )
+          )}
+
+          {/* STEP 2_REAL: WEB API LIVE DARAJA STK PUSH LOADER OR WAITING */}
+          {step === 'stk_real_push' && (
+            <div className="py-4 flex flex-col items-center text-center gap-4 animate-scaleUp text-left">
+              {stkPushStep === 'calling' && (
+                <div className="space-y-4 py-6 w-full text-center">
+                  <div className="relative w-16 h-16 mx-auto">
+                    <div className="absolute inset-0 rounded-full border-4 border-t-[#00e600] border-zinc-850 animate-spin" />
+                    <span className="absolute inset-0 flex items-center justify-center text-lg">📡</span>
+                  </div>
+                  <div className="space-y-2">
+                    <h5 className="text-[#00e600] font-black text-xs uppercase tracking-widest animate-pulse">
+                      Triggering Safaricom STK Push
+                    </h5>
+                    <p className="text-[10px] text-gray-400 leading-normal max-w-[260px] mx-auto">
+                      Executing POST handshake to: <code className="text-zinc-200 font-mono text-[9px] bg-black/40 px-1 py-0.5 rounded break-all">{vercelApiUrl}</code>
+                    </p>
+                    <div className="bg-black/35 p-2.5 rounded border border-zinc-800 text-left font-mono text-[9px] text-gray-400 space-y-1 max-w-xs mx-auto">
+                      <div><span className="text-zinc-500">Target Phone:</span> {formattedPhone}</div>
+                      <div><span className="text-zinc-500">Total amount:</span> KSh {parseFloat(amount).toLocaleString()}</div>
+                      <div><span className="text-zinc-500">Reference ID:</span> STK-{Date.now().toString().slice(-4)}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {stkPushStep === 'waiting' && (
+                <div className="space-y-4 w-full text-center">
+                  <div className="w-14 h-14 bg-green-950/40 border border-[#00e600]/20 text-[#00e600] rounded-full flex items-center justify-center text-xl shadow-lg mx-auto ring-4 ring-[#00e600]/10 animate-pulse">
+                    📲
+                  </div>
+                  
+                  <div className="space-y-1 text-center">
+                    <h5 className="text-[#00e600] font-black text-sm uppercase tracking-wider">
+                      STK Push Dispatched!
+                    </h5>
+                    <p className="text-[11px] text-gray-400 leading-normal max-w-[280px] mx-auto font-sans">
+                      A live Safaricom M-Pesa PIN dialogue has been triggered on phone number <strong className="text-white font-mono">{formattedPhone}</strong> for KSh <strong className="text-[#00e600] font-mono">{parseFloat(amount).toLocaleString()}</strong>.
+                    </p>
+                  </div>
+
+                  <div className="bg-zinc-900/60 p-3 rounded-xl border border-zinc-800 text-left space-y-2 font-mono text-[9px] text-gray-400 max-w-xs mx-auto">
+                    <div className="flex items-center justify-between text-yellow-500 font-bold">
+                      <span>DIALOG TIMEWINDOW:</span>
+                      <span className="text-rose-400">{Math.floor(realStkWaitingSecs / 60)}:{String(realStkWaitingSecs % 60).padStart(2, '0')}</span>
+                    </div>
+                    <p className="text-[8.5px] leading-tight text-gray-400 border-t border-zinc-800/80 pt-1.5 font-sans">
+                      💡 Safaricom instructions: Unlock your mobile phone screen, enter your M-Pesa Secret PIN on the popped panel, and wait. Once complete, click the green validation confirmation below!
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-2 max-w-xs mx-auto w-full">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('success');
+                        onDepositSuccess(parseFloat(amount));
+                      }}
+                      className="w-full py-3.5 bg-[#00e600] hover:bg-[#1bf31b] text-black text-xs font-black uppercase tracking-wider rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer transition-transform active:scale-95 text-center font-bold"
+                    >
+                      ✅ I Have Entered PIN & Confirm Funds
+                    </button>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStep('form');
+                        }}
+                        className="flex-1 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold uppercase text-[9px] rounded border border-zinc-700/50 cursor-pointer transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerRealStkPush(parseFloat(amount))}
+                        className="flex-1 py-1.5 bg-purple-950/40 hover:bg-purple-900/40 text-[#fbbf24] font-bold uppercase text-[9px] rounded border border-purple-500/20 cursor-pointer transition-colors"
+                      >
+                        🔄 Re-send STK
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {stkPushStep === 'failed' && (
+                <div className="space-y-4 w-full text-center">
+                  <div className="w-12 h-12 bg-red-950/40 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center text-xl shadow-lg mx-auto">
+                    ⚠️
+                  </div>
+                  
+                  <div className="space-y-1.5 text-center">
+                    <h5 className="text-red-500 font-black text-xs uppercase tracking-widest">
+                      Vercel Gateway Failed
+                    </h5>
+                    <p className="text-[10px] text-zinc-400 leading-normal max-w-[270px] mx-auto font-sans">
+                      Could not reach or execute STK Push via your Vercel endpoint. Error details:
+                    </p>
+                    <div className="bg-red-500/5 text-red-350 font-mono text-[9px] p-2.5 rounded border border-red-500/10 text-left overflow-x-auto break-all max-h-24 max-w-xs mx-auto">
+                      {stkErrorMessage}
+                    </div>
+                  </div>
+
+                  {stkErrorMessage.includes('404') ? (
+                    <div className="bg-yellow-500/5 p-2.5 rounded border border-yellow-500/15 text-[8.5px] text-left leading-normal text-yellow-300/80 font-sans max-w-xs mx-auto">
+                      💡 <strong>Configuration Guideline:</strong> If you are seeing a 404 error, please check that your real STK endpoint is online. The administrator can securely configure their real production endpoint using the <code className="font-mono text-[7.5px] bg-black/40 px-1 py-0.5 rounded text-white">MPESA_STK_API_URL</code> environment variable path inside the Google AI Studio Settings.
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-500/5 p-2.5 rounded border border-yellow-500/15 text-[8.5px] text-left leading-normal text-yellow-300/80 font-sans max-w-xs mx-auto">
+                      💡 <strong>CORS or Domain Warning:</strong> Ensure your Vercel serverless function exposes permissive CORS headers (<code className="font-mono text-[7.5px] bg-black/40 px-1 py-0.5 rounded text-white">Access-Control-Allow-Origin: *</code>) to allow request handshakes from exterior client browsers.
+                    </div>
+                  )}
+
+                   <div className="flex pt-2 max-w-xs mx-auto w-full">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('form');
+                      }}
+                      className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase text-[9.5px] rounded-lg transition-transform active:scale-95 cursor-pointer"
+                    >
+                      Back to Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* STEP 2A: CUSTOM PASTE TRANSACTION AND Confirmation SMS DETAILS FIELD */}

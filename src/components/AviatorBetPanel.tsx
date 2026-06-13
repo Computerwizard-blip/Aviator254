@@ -497,7 +497,7 @@ export default function AviatorBetPanel({
               >
                 <span className="text-white text-sm font-black tracking-widest uppercase leading-tight">CANCEL</span>
                 <span className="text-white text-[10px] uppercase font-mono font-bold opacity-80">
-                  {isWaitingNextRound ? 'Wait Next Round' : 'Lobby Refund'}
+                  {isWaitingNextRound ? 'Wait Next Round' : 'Refund'}
                 </span>
               </button>
             ) : (

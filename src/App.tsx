@@ -806,7 +806,21 @@ export default function App() {
 
   useEffect(() => {
     phaseStartTimeRef.current = Date.now();
-  }, [currentPhase]);
+    if (currentPhase === 'lobby' && currentView === 'aviator') {
+      audioEngine.playFlightStart();
+    }
+  }, [currentPhase, currentView]);
+
+  // Stop/play flight background sound based on navigating into or out of Aviator view
+  useEffect(() => {
+    if (currentView !== 'aviator') {
+      audioEngine.stopFlightSound();
+    } else {
+      if (currentPhase === 'lobby' || currentPhase === 'flight') {
+        audioEngine.playFlightStart();
+      }
+    }
+  }, [currentView, currentPhase]);
 
   // Set initial history list on mount dynamically
   useEffect(() => {
@@ -823,6 +837,15 @@ export default function App() {
       const now = Date.now();
       const elapsed = now - phaseStartTimeRef.current;
       const limit = getCurrentRoundLimit(roundIndex);
+
+      // Slowly and realistically fluctuate overall online lobby counter
+      if (typeof window !== 'undefined' && currentPhase === 'lobby' && Math.random() < 0.15) {
+        setOnlinePlayersCount(prev => {
+          const jitter = Math.floor(Math.random() * 5) - 2; // -2 to +2
+          const nextVal = prev + jitter;
+          return Math.min(2450, Math.max(1800, nextVal));
+        });
+      }
 
       // Determine flight duration smoothly scaled
       let flightDuration = 5000;
@@ -841,17 +864,17 @@ export default function App() {
         const countdownVal = parseFloat(((lobbyDuration - elapsed) / 1000).toFixed(1));
         if (countdownVal > 0) {
           setCountdownValue(countdownVal);
-          setOnlinePlayersCount(startingPlayers);
+          // General room counter now fluctuates organically on tick
           setCrashActive(false);
           setCrashMultiplier(1.00);
           setCrashStatusMessage("Lobby Loaded");
           setRoundCrashLimit(limit);
         } else {
           // Transition to flight!
-          audioEngine.playFlightStart();
           setCrashActive(true);
           setCountdownValue(null);
           setRoundCrashLimit(limit);
+          setStartingPlayers(onlinePlayersCount); // Lock the current lobby count as starting point
           bothBetsPlacedInRoundRef.current = (panel1ActiveBetRef.current !== null && panel2ActiveBetRef.current !== null);
           setCurrentPhase('flight');
         }
@@ -886,22 +909,38 @@ export default function App() {
             });
           });
 
-          // Decrement online survivors count smoothly
-          const totalProgress = Math.min(0.98, (currentScale - 1.0) / (limit - 1.0 || 1.0));
-          const calculatedAliveCount = Math.max(
+          // Decline online survivors count smoothly and strictly based on the scale range
+          let remainingFraction = 1.0;
+          if (currentScale <= 1.99) {
+            const scaleFraction = Math.max(0, Math.min(1, (currentScale - 1.0) / 0.99));
+            // Declines slowly and organically by around 12% total in this initial range (from 100% to 88%)
+            remainingFraction = 1.0 - (scaleFraction * 0.12) + (Math.sin(currentScale * 12) * 0.003);
+          } else {
+            // Above 1.99x, it declines steadily and faster as players cash out at high limits
+            const scaleFraction = Math.max(0, Math.min(1, (currentScale - 1.99) / (limit - 1.99 || 1.0)));
+            const floorFrac = 0.035;
+            remainingFraction = 0.88 - Math.pow(scaleFraction, 1.6) * (0.88 - floorFrac) + (Math.sin(currentScale * 4) * 0.002);
+          }
+          // Clamp and compute physical counter values
+          remainingFraction = Math.max(0.03, Math.min(1.0, remainingFraction));
+          const calculatedCount = Math.max(
             finalMinPlayers,
-            Math.round(startingPlayers - totalProgress * (startingPlayers - finalMinPlayers))
+            Math.round(startingPlayers * remainingFraction)
           );
-          setOnlinePlayersCount(calculatedAliveCount);
+          setOnlinePlayersCount(calculatedCount);
         } else {
           // Transition to crashed!
-          audioEngine.playCrash();
+          if (currentView === 'aviator') {
+            audioEngine.playCrash();
+          } else {
+            audioEngine.stopFlightSound();
+          }
           setCrashActive(false);
           setCountdownValue(null);
           setCrashMultiplier(limit);
           setCrashStatusMessage(`FLEW AWAY! at ${limit.toFixed(2)}x`);
           resolveRoundUnsecuredBets();
-          setOnlinePlayersCount(0);
+          // General room counter is preserved realistically during crash instead of forced to zero
           
           // Append actual result to history ribbon list
           setHistoryList(prev => {
@@ -933,7 +972,12 @@ export default function App() {
           }
 
           bothBetsPlacedInRoundRef.current = false;
-          setRoundIndex(prev => prev + 1);
+          setRoundIndex(prev => {
+            const nextLobbyCount = Math.floor(Math.random() * (2500 - 1500 + 1)) + 1500;
+            setOnlinePlayersCount(nextLobbyCount);
+            setStartingPlayers(nextLobbyCount);
+            return prev + 1;
+          });
           setCurrentPhase('lobby');
         }
       }
@@ -1026,7 +1070,9 @@ export default function App() {
 
   const handleCashOut = (panelId: string, finalMult: number, cashPayout: number) => {
     // Sound effect trigger
-    audioEngine.playCashout();
+    if (currentView === 'aviator') {
+      audioEngine.playCashout();
+    }
     // Deposit cashout rewards immediately
     setBalance(prev => parseFloat((prev + cashPayout).toFixed(2)));
 

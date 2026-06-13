@@ -381,13 +381,15 @@ export default function WalletAndTill({
                       <div className="bg-[#0f071f] p-3 rounded-lg border border-purple-500/10 flex flex-col gap-2">
                         <div className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-widest block font-mono">Generated Payment Link</div>
                         <div className="bg-black/40 text-[9.5px] font-mono text-purple-300 p-2.5 rounded border border-purple-900/40 select-all truncate">
-                          https://pay.casinohub.link/checkout/mpesa?amt={amountInput}&tel={phoneInput}&order=CH-{Date.now().toString().slice(-6)}
+                          https://aviatokenya254.vercel.app/api/sasapay-pay?amt={amountInput}&tel={phoneInput}&order=CH-{Date.now().toString().slice(-6)}
                         </div>
                         
                         <div className="flex gap-2 mt-1">
                           <button
                             onClick={() => {
-                              triggerNotification('Checkout Webpage Opened', 'Simulated Secure M-Pesa Checkout link active!', 'general');
+                              const payUrl = `https://aviatokenya254.vercel.app/api/sasapay-pay?amt=${amountInput}&tel=${phoneInput}`;
+                              window.open(payUrl, '_blank');
+                              triggerNotification('Checkout Webpage Opened', 'Launching secure Sasapay M-Pesa gateway...', 'deposit');
                             }}
                             className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-[10px] uppercase tracking-wider rounded text-center transition-all cursor-pointer shadow-md select-none"
                           >
@@ -396,7 +398,7 @@ export default function WalletAndTill({
                           
                           <button
                             onClick={() => {
-                              const payUrl = `https://pay.casinohub.link/checkout/mpesa?amt=${amountInput}&tel=${phoneInput}`;
+                              const payUrl = `https://aviatokenya254.vercel.app/api/sasapay-pay?amt=${amountInput}&tel=${phoneInput}`;
                               navigator.clipboard.writeText(payUrl);
                               triggerNotification('Link Copied', 'M-Pesa payment link copied to clipboard!', 'general');
                             }}

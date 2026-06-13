@@ -111,6 +111,39 @@ export default function CasinoGames({
 }: CasinoGamesProps) {
   const [selectedGame, setSelectedGame] = useState<GameItem | null>(null);
   const [betAmount, setBetAmount] = useState<number>(10);
+  const [winOverlay, setWinOverlay] = useState<{ amount: number; message: string; title: string } | null>(null);
+
+  // Auto-dismiss helper for Win Overlay
+  const triggerWinOverlay = (amount: number, message: string, title: string = 'YOU WON!') => {
+    setWinOverlay({ amount, message, title });
+    setTimeout(() => {
+      setWinOverlay(prev => (prev?.amount === amount ? null : prev));
+    }, 4500);
+  };
+
+  const awardWinnings = (amount: number, gameTitle: string, methodLabel: string) => {
+    setWallet((prev) => {
+      const isReal = authSessionMode === 'real';
+      const balanceField = isReal ? 'realBalance' : 'demoBalance';
+      const currentVal = prev[balanceField];
+      const newVal = parseFloat((currentVal + amount).toFixed(2));
+      return {
+        ...prev,
+        [balanceField]: newVal,
+        mainBalance: newVal
+      };
+    });
+
+    addTransaction({
+      type: 'win',
+      amount: amount,
+      currency: 'KSh',
+      method: methodLabel,
+      game: gameTitle
+    });
+
+    triggerWinOverlay(amount, `Congratulations! Your balance has been instantly credited under ${authSessionMode === 'real' ? 'Real' : 'Demo'} Funds. Game: ${gameTitle}.`, 'YOU WON!');
+  };
 
   // Automated sliding banner states & ticking jackpot setup
   const [currentSlide, setCurrentSlide] = useState<number>(0);
@@ -499,15 +532,8 @@ export default function CasinoGames({
             if (won) {
               const multi = liveUserBetOn === 'green' ? 35 : 2;
               const payout = betAmount * multi;
-              setWallet(w => ({ ...w, mainBalance: w.mainBalance + payout }));
+              awardWinnings(payout, 'Lightning Roulette Live', 'Live Studio Payout');
               triggerNotification('Live Casino Win!', `You won KSh ${payout.toFixed(2)} on Sophia's Live Roulette!`, 'general');
-              addTransaction({
-                type: 'win',
-                amount: payout,
-                currency: 'KSh',
-                method: 'Live Studio Payout',
-                game: 'Lightning Roulette Live'
-              });
             }
             setLiveUserBetOn('');
           }
@@ -566,14 +592,25 @@ export default function CasinoGames({
   };
 
   const deductFunds = (amount: number, gameTitle: string): boolean => {
-    if (wallet.mainBalance < amount) {
-      triggerNotification('Insufficient Funds', 'Your main balance is too low. Place a secure deposit now!', 'general');
+    const isReal = authSessionMode === 'real';
+    const balanceField = isReal ? 'realBalance' : 'demoBalance';
+    const activeBalance = wallet[balanceField];
+
+    if (activeBalance < amount) {
+      triggerNotification('Insufficient Funds', 'Your balance is too low. Place a secure deposit now!', 'general');
       return false;
     }
-    setWallet((prev) => ({
-      ...prev,
-      mainBalance: parseFloat((prev.mainBalance - amount).toFixed(2))
-    }));
+    setWallet((prev) => {
+      const isReal = authSessionMode === 'real';
+      const balanceField = isReal ? 'realBalance' : 'demoBalance';
+      const currentVal = prev[balanceField];
+      const newVal = parseFloat((currentVal - amount).toFixed(2));
+      return {
+        ...prev,
+        [balanceField]: newVal,
+        mainBalance: newVal
+      };
+    });
     incrementJackpots(amount * 0.05); // 5% added toprogressive jackpots
     addTransaction({
       type: 'bet',
@@ -667,42 +704,21 @@ export default function CasinoGames({
         if (unique.size === 1) {
           const winMultiplier = finalReels[0] === '🎰' ? 50 : finalReels[0] === '👑' ? 30 : finalReels[0] === '💎' ? 20 : 10;
           const totalWin = betAmount * winMultiplier;
-          setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + totalWin).toFixed(2)) }));
+          awardWinnings(totalWin, selectedGame?.title || 'Slots Mania', 'Slot Jackpot Win');
           setSlotsStatus(`JACKPOT COMBO! 3x ${finalReels[0]} pays KSh ${totalWin.toFixed(2)}`);
           triggerNotification('Big Slot Win!', `Stunning jackpot combo! You won KSh ${totalWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
-          addTransaction({
-            type: 'win',
-            amount: totalWin,
-            currency: 'KSh',
-            method: 'Slot Jackpot Win',
-            game: selectedGame?.title
-          });
 
           // Progressive Jackpot opportunity!
           if (Math.random() > 0.85 && selectedGame?.jackpotEligible) {
             const jpType = Math.random() > 0.8 ? 'Mega' : 'Major';
             const jpWin = jpType === 'Mega' ? jackpotPool.mega : jackpotPool.major;
-            setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + jpWin).toFixed(2)) }));
+            awardWinnings(jpWin, selectedGame?.title || 'Slots Mania', `Progressive ${jpType} Jackpot`);
             triggerNotification('PROGRESSIVE JACKPOT WON!', `OMG! You hit the ${jpType} Jackpot for KSh ${jpWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
-            addTransaction({
-              type: 'win',
-              amount: jpWin,
-              currency: 'KSh',
-              method: `Progressive ${jpType} Jackpot`,
-              game: selectedGame?.title
-            });
           }
         } else if (unique.size === 2) {
           const totalWin = betAmount * 1.5;
-          setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + totalWin).toFixed(2)) }));
+          awardWinnings(totalWin, selectedGame?.title || 'Slots Mania', 'Slot Match Win');
           setSlotsStatus(`Double Combo! 2x identical symbols pays KSh ${totalWin.toFixed(2)}`);
-          addTransaction({
-            type: 'win',
-            amount: totalWin,
-            currency: 'KSh',
-            method: 'Slot Match Win',
-            game: selectedGame?.title
-          });
         } else {
           setSlotsStatus('Bummer! No winning combinations. Tune your stakes and try again.');
         }
@@ -787,17 +803,9 @@ export default function CasinoGames({
     setCrashHasCashedOut(true);
     const payout = parseFloat((betAmount * targetMult).toFixed(2));
     setCrashPayoutAmount(payout);
-    setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+    awardWinnings(payout, gameTitle, 'Auto Cashout Target');
     setCrashMessage(`AUTO CASHOUT SUCCESS! Paid out at x${targetMult}! Got KSh ${payout.toFixed(2)}`);
     triggerNotification('Auto Cashout Cleared!', `Secured profit of KSh ${payout.toFixed(2)} on x${targetMult}!`, 'general');
-    
-    addTransaction({
-      type: 'win',
-      amount: payout,
-      currency: 'KSh',
-      method: 'Auto Cashout Target',
-      game: gameTitle
-    });
   };
 
   const manualCrashCashOut = () => {
@@ -807,17 +815,9 @@ export default function CasinoGames({
     setCrashHasCashedOut(true);
     const payout = parseFloat((betAmount * crashMultiplier).toFixed(2));
     setCrashPayoutAmount(payout);
-    setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+    awardWinnings(payout, gameLabel, 'Manual Recall Cashout');
     setCrashMessage(`SUCCESS! Secured cashout at x${crashMultiplier}! Profit: KSh ${payout.toFixed(2)}`);
     triggerNotification('Cashout Claimed!', `Recalled winnings of KSh ${payout.toFixed(2)} on ${gameLabel}!`, 'general');
-    
-    addTransaction({
-      type: 'win',
-      amount: payout,
-      currency: 'KSh',
-      method: 'Manual Recall Cashout',
-      game: gameLabel
-    });
   };
 
   // --- MINES MACHINE LOGIC ---
@@ -852,17 +852,11 @@ export default function CasinoGames({
       if (revCount === nonMines) {
         const multiplier = parseFloat((1 + (minesCount * 0.45)).toFixed(2));
         const payout = parseFloat((betAmount * multiplier).toFixed(2));
-        setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+        awardWinnings(payout, 'Mines Gold Mines', 'Sweep Win');
         setMinesGameOver(true);
         setMinesOutcome('WIN');
         setMinesBetPlaced(false);
         triggerNotification('Mines Sweep Completed!', `Outstanding! You swept all tiles for KSh ${payout.toFixed(2)}!`, 'general');
-        addTransaction({
-          type: 'win',
-          amount: payout,
-          currency: 'KSh',
-          game: 'Mines Gold Mines'
-        });
       }
     }
   };
@@ -872,19 +866,11 @@ export default function CasinoGames({
 
     const multiplier = parseFloat((1 + (minesRevealedCount * (minesCount * 0.16))).toFixed(2));
     const payout = parseFloat((betAmount * multiplier).toFixed(2));
-    setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+    awardWinnings(payout, 'Mines Gold Mines', 'Mine Winnings Claimed');
     setMinesGameOver(true);
     setMinesOutcome('WIN');
     setMinesBetPlaced(false);
     triggerNotification('Mines Secured!', `Withdrew KSh ${payout} with nice multiplier x${multiplier}!`, 'general');
-    
-    addTransaction({
-      type: 'win',
-      amount: payout,
-      currency: 'KSh',
-      method: 'Mine Winnings Claimed',
-      game: 'Mines Gold Mines'
-    });
   };
 
   // --- PLINKO GAME LOGIC ---
@@ -917,20 +903,13 @@ export default function CasinoGames({
       }
       
       const payout = parseFloat((betAmount * mult).toFixed(2));
-      setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+      awardWinnings(payout, 'Plinko Multi-drops', 'Multiplier Win');
       setPlinkoMultiplierSelected(mult);
       setIsPlinkoDropping(false);
       
       if (mult > 1.0) {
         triggerNotification('Plinko Multipled Win!', `Rewarded x${mult} payouts total KSh ${payout.toFixed(2)}`, 'general');
       }
-      
-      addTransaction({
-        type: 'win',
-        amount: payout,
-        currency: 'KSh',
-        game: 'Plinko Multi-drops'
-      });
     }, 1500);
   };
 
@@ -963,14 +942,8 @@ export default function CasinoGames({
       }
 
       if (totalWin > 0) {
-        setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + totalWin).toFixed(2)) }));
+        awardWinnings(totalWin, 'European Roulette Pro', 'Table Win');
         triggerNotification('Roulette WIN!', `Winner! Drawn number is ${outcomeNum} (${color.toUpperCase()}). You earned KSh ${totalWin}!`, 'general');
-        addTransaction({
-          type: 'win',
-          amount: totalWin,
-          currency: 'KSh',
-          game: 'European Roulette Pro'
-        });
       } else {
         triggerNotification('No Match!', `Drawn was ${outcomeNum} (${color.toUpperCase()}). Try another round.`, 'general');
       }
@@ -1063,28 +1036,25 @@ export default function CasinoGames({
 
     if (dealerSum > 21) {
       const payout = betAmount * 2;
-      setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+      awardWinnings(payout, 'Classic Blackjack Multi-hand', 'Dealer Busted Win');
       setBlackjackStatus(`WINNER! Dealer busted with ${dealerSum}! Credited KSh ${payout.toFixed(2)}`);
       triggerNotification('Dealer busted!', `Blackjack profit transferred of KSh ${payout.toFixed(2)}`, 'general');
-      addTransaction({
-        type: 'win',
-        amount: payout,
-        currency: 'KSh',
-        game: 'Classic Blackjack Multi-hand'
-      });
     } else if (playerSum > dealerSum) {
       const payout = betAmount * 2;
-      setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+      awardWinnings(payout, 'Classic Blackjack Multi-hand', 'High Score Win');
       setBlackjackStatus(`WINNER! You scored ${playerSum} vs Dealer's ${dealerSum}! Credited KSh ${payout.toFixed(2)}`);
       triggerNotification('Blackjack clear!', `Beated croupier! Won KSh ${payout.toFixed(2)}!`, 'general');
-      addTransaction({
-        type: 'win',
-        amount: payout,
-        currency: 'KSh',
-        game: 'Classic Blackjack Multi-hand'
-      });
     } else if (playerSum === dealerSum) {
-      setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + betAmount).toFixed(2)) }));
+      setWallet(prev => {
+        const isReal = authSessionMode === 'real';
+        const balanceField = isReal ? 'realBalance' : 'demoBalance';
+        const newVal = parseFloat((prev[balanceField] + betAmount).toFixed(2));
+        return {
+          ...prev,
+          [balanceField]: newVal,
+          mainBalance: newVal
+        };
+      });
       setBlackjackStatus(`PUSH! Tied scores at ${playerSum}. Stake returned.`);
     } else {
       setBlackjackStatus(`Dealer Wins with ${dealerSum} vs ${playerSum}. Try another round.`);
@@ -1137,20 +1107,17 @@ export default function CasinoGames({
       setWheelSelectedItem(selected);
 
       const payout = parseFloat((betAmount * selected.mult).toFixed(2));
-      if (payout > 0) {
-        setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
-      }
 
       if (selected.mult > 1) {
+        awardWinnings(payout, 'Mega Wheel Spin', 'Wheel Win Payout');
         triggerNotification('Mega Wheel Win!', `Matched multiplier ${selected.sector}! Credited KSh ${payout.toFixed(2)} received!`, 'general');
-        addTransaction({
-          type: 'win',
-          amount: payout,
-          currency: 'KSh',
-          method: 'Wheel Win Payout',
-          game: 'Mega Wheel Spin'
-        });
       } else if (selected.mult === 1) {
+        setWallet(prev => {
+          const isReal = authSessionMode === 'real';
+          const balanceField = isReal ? 'realBalance' : 'demoBalance';
+          const newVal = parseFloat((prev[balanceField] + payout).toFixed(2));
+          return { ...prev, [balanceField]: newVal, mainBalance: newVal };
+        });
         triggerNotification('Wager Returned', `Landed on x1. Push - stake returned.`, 'general');
         addTransaction({
           type: 'win',
@@ -1180,14 +1147,8 @@ export default function CasinoGames({
 
       if (coinBetOn === randResult) {
         const payout = parseFloat((betAmount * 1.96).toFixed(2));
-        setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+        awardWinnings(payout, 'Turbo Coin Flip', 'Multiplier Win');
         triggerNotification('Coin Flip Win!', `Matched ${randResult.toUpperCase()}! You won KSh ${payout}!`, 'general');
-        addTransaction({
-          type: 'win',
-          amount: payout,
-          currency: 'KSh',
-          game: 'Turbo Coin Flip'
-        });
       } else {
         triggerNotification('Flip Lost!', `Landed ${randResult.toUpperCase()}. Try heads next!`, 'general');
       }
@@ -1217,14 +1178,8 @@ export default function CasinoGames({
         const multiplier = parseFloat((98 / winChance).toFixed(2));
         const payout = parseFloat((betAmount * multiplier).toFixed(2));
 
-        setWallet(w => ({ ...w, mainBalance: parseFloat((w.mainBalance + payout).toFixed(2)) }));
+        awardWinnings(payout, 'Master Roll Dice', 'Multiplier Win');
         triggerNotification('Dice Master Win!', `Rolled ${outcome}! You matched Over/Under target and won KSh ${payout}!`, 'general');
-        addTransaction({
-          type: 'win',
-          amount: payout,
-          currency: 'KSh',
-          game: 'Master Roll Dice'
-        });
       } else {
         triggerNotification('Roll Missed!', `Outcome ${outcome} did not meet criteria. Adjust and roll again!`, 'general');
       }
@@ -1305,6 +1260,37 @@ export default function CasinoGames({
               <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-red-600/95 text-white font-mono px-2 py-0.5 rounded text-[10px] font-black animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                 <span>SECURE HIGH LIMIT CASINO TRANSMISSION</span>
+              </div>
+            )}
+
+            {/* Visual Win Overlay Banner */}
+            {winOverlay && (
+              <div className="absolute inset-0 bg-[#06020f]/95 z-40 flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.2),transparent_70%)] pointer-events-none"></div>
+                
+                <div className="relative z-10 space-y-4 max-w-xs transition-transform transform scale-100 ease-out duration-300">
+                  <div className="text-5xl animate-bounce">🏆</div>
+                  
+                  <div className="space-y-1">
+                    <h4 className="text-amber-400 font-extrabold tracking-widest text-[11px] uppercase">
+                      {winOverlay.title || 'BIG WINNER!'}
+                    </h4>
+                    <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.3)] select-all font-mono">
+                      +KSh {winOverlay.amount.toFixed(2)}
+                    </p>
+                  </div>
+                  
+                  <p className="text-[11px] text-purple-200/80 font-medium font-sans">
+                    {winOverlay.message}
+                  </p>
+                  
+                  <button
+                    onClick={() => setWinOverlay(null)}
+                    className="px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold text-[10px] uppercase tracking-wider rounded-lg transition-all transform active:scale-[0.97] cursor-pointer shadow-md shadow-amber-500/10"
+                  >
+                    Collect Winnings
+                  </button>
+                </div>
               </div>
             )}
 
