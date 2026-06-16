@@ -121,9 +121,27 @@ export default function AviatorGameViewport({
 
         // Create beautiful curve path
         ctx.shadowBlur = 0;
+
+        // Draw the Red Sheet underneath the curve block first
+        ctx.save();
         ctx.beginPath();
         ctx.moveTo(10, h - 10);
-        // Bezier curve to the current plane coordinates (glowing red trail)
+        ctx.quadraticCurveTo(planeX * 0.5, h * 0.98, planeX - 10, planeY + 5);
+        ctx.lineTo(planeX, planeY);
+        ctx.lineTo(planeX, h - 10);
+        ctx.closePath();
+
+        // Create elegant red-theme gradient for the sheet
+        const sheetGrad = ctx.createLinearGradient(0, planeY, 0, h - 10);
+        sheetGrad.addColorStop(0, 'rgba(163, 11, 28, 0.45)'); // Deep crimson red at the top
+        sheetGrad.addColorStop(1, 'rgba(163, 11, 28, 0.05)'); // Smoothly fades to near transparency at bottom
+        ctx.fillStyle = sheetGrad;
+        ctx.fill();
+        ctx.restore();
+
+        // Draw the main glowing red curve trend line
+        ctx.beginPath();
+        ctx.moveTo(10, h - 10);
         ctx.quadraticCurveTo(planeX * 0.5, h * 0.98, planeX - 10, planeY + 5);
         ctx.lineTo(planeX, planeY);
         ctx.strokeStyle = '#e21515'; // Hot solid red line
@@ -169,47 +187,163 @@ export default function AviatorGameViewport({
         // Slightly rotate upward corresponding to ascend angle
         ctx.rotate(-Math.PI / 18 + Math.sin(Date.now() / 80) * 0.05);
 
-        // Core airplane drawing (beautiful red icon geometry representation)
-        ctx.shadowColor = 'rgba(255, 30, 30, 1.0)';
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = '#ff2b2b'; // solid vibrant red body
+        // Core airplane drawing (beautiful red icon geometry representation matching the reference precisely)
+        ctx.shadowColor = 'rgba(255, 30, 30, 0.9)';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#ff1e1e'; // Solid vibrant red
+        ctx.strokeStyle = '#ff1e1e';
+        ctx.lineWidth = 1.5;
 
-        // Draw Propeller Plane Body
+        // Draw the main fuselage body (solid red with elegant classic outline)
         ctx.beginPath();
-        ctx.moveTo(12, 0); // nose
-        ctx.lineTo(-12, -7); // upper body
-        ctx.lineTo(-15, -4); // tail upper
-        ctx.lineTo(-15, 4); // tail lower
-        ctx.lineTo(-12, 7); // lower body
+        // Starts behind the spinner/nose (right side)
+        ctx.moveTo(22, -1);
+        // Cockpit hood & canopy
+        ctx.quadraticCurveTo(10, -7, 2, -7);
+        // Canopy glass dome
+        ctx.bezierCurveTo(-2, -15, -12, -15, -18, -6);
+        // Taper back to the tail
+        ctx.lineTo(-32, -4);
+        // Tail fin (vertical stabilizer)
+        ctx.lineTo(-38, -16);
+        ctx.lineTo(-44, -14);
+        ctx.quadraticCurveTo(-40, -4, -42, 0); // bottom tail tip
+        // Underbody tailwheel structure
+        ctx.lineTo(-35, 3);
+        // Bottom fuselage tapering to nose
+        ctx.lineTo(-20, 4);
+        ctx.quadraticCurveTo(0, 7, 22, -1);
         ctx.closePath();
         ctx.fill();
 
-        // Draw Jet Wings
-        ctx.fillStyle = '#ff1414';
-        ctx.beginPath();
-        ctx.moveTo(-2, -5);
-        ctx.lineTo(-7, -19); // wingtip top
-        ctx.lineTo(2, -19);
-        ctx.lineTo(6, -5);
-        ctx.closePath();
-        ctx.fill();
+        // Structural detail lines inside to form the negative cuts / accents (matching reference)
+        ctx.strokeStyle = '#100c14'; // Matching cockpit background for sharp cutouts
+        ctx.lineWidth = 1.8;
 
+        // Cockpit glass pane detail line cutouts
         ctx.beginPath();
-        ctx.moveTo(-2, 5);
-        ctx.lineTo(-7, 19); // wingtip bottom
-        ctx.lineTo(2, 19);
-        ctx.lineTo(6, 5);
-        ctx.closePath();
-        ctx.fill();
-
-        // Propeller head spin line visual
-        ctx.strokeStyle = '#eaeaea';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(13, -10 + Math.sin(Date.now() / 15) * 10);
-        ctx.lineTo(13, 10 - Math.sin(Date.now() / 15) * 10);
+        ctx.moveTo(-6, -12);
+        ctx.lineTo(-8, -6);
+        ctx.moveTo(-12, -11);
+        ctx.lineTo(-14, -6);
         ctx.stroke();
 
+        // Diagonal fuselage rib markings ("X" mark)
+        ctx.beginPath();
+        ctx.moveTo(-16, -1);
+        ctx.lineTo(-26, 2);
+        ctx.moveTo(-26, -1);
+        ctx.lineTo(-16, 2);
+        ctx.stroke();
+
+        // Draw the classic propeller biplane wings
+        ctx.fillStyle = '#ff1e1e';
+        ctx.shadowBlur = 4;
+
+        // 1. Lower Wing (pointing down-left)
+        ctx.beginPath();
+        ctx.moveTo(10, 2);
+        ctx.bezierCurveTo(2, 12, -14, 25, -20, 24);
+        ctx.lineTo(-25, 18);
+        ctx.bezierCurveTo(-15, 12, 2, 4, 10, 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Lower wing structural ribs
+        ctx.strokeStyle = '#100c14';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let offset = -5; offset <= 10; offset += 5) {
+          ctx.moveTo(-8 - offset, 11 + offset * 0.6);
+          ctx.lineTo(-12 - offset, 16 + offset * 0.6);
+        }
+        ctx.stroke();
+
+        // 2. Upper Wing (pointing up-left)
+        ctx.fillStyle = '#ff1e1e';
+        ctx.beginPath();
+        ctx.moveTo(12, -8);
+        ctx.bezierCurveTo(4, -18, -12, -28, -18, -26);
+        ctx.lineTo(-22, -20);
+        ctx.bezierCurveTo(-14, -16, 4, -8, 12, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Upper wing structural ribs
+        ctx.strokeStyle = '#100c14';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let offset = -5; offset <= 10; offset += 5) {
+          ctx.moveTo(-7 - offset, -15 - offset * 0.6);
+          ctx.lineTo(-11 - offset, -20 - offset * 0.6);
+        }
+        ctx.stroke();
+
+        // Wing attachment struts
+        ctx.strokeStyle = '#ff1e1e';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(5, -6);
+        ctx.lineTo(2, -14);
+        ctx.moveTo(-8, -5);
+        ctx.lineTo(-10, -18);
+        ctx.stroke();
+
+        // 3. Horizontal Elevator Stabilizer
+        ctx.fillStyle = '#ff1e1e';
+        ctx.beginPath();
+        ctx.moveTo(-30, -2);
+        ctx.quadraticCurveTo(-38, 2, -42, 6);
+        ctx.lineTo(-44, 2);
+        ctx.quadraticCurveTo(-38, -2, -30, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Propeller Head hub
+        ctx.fillStyle = '#ff1e1e';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(22, -1, 4.5, -Math.PI / 2, Math.PI / 2);
+        ctx.fill();
+
+        // Propeller Blades spinning fast
+        ctx.save();
+        ctx.translate(22, -1);
+        ctx.rotate(Date.now() / 60);
+        ctx.fillStyle = '#ff1e1e';
+        ctx.strokeStyle = '#ff1e1e';
+        ctx.lineWidth = 1;
+        
+        // Prop blade 1
+        ctx.beginPath();
+        ctx.moveTo(-1.5, 0);
+        ctx.quadraticCurveTo(-3, -15, -1, -26);
+        ctx.quadraticCurveTo(2.5, -26, 1.5, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Prop blade 1 white highlight tip
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-0.5, -24, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Prop blade 2
+        ctx.fillStyle = '#ff1e1e';
+        ctx.beginPath();
+        ctx.moveTo(-1.5, 0);
+        ctx.quadraticCurveTo(-3, 15, -1, 26);
+        ctx.quadraticCurveTo(2.5, 26, 1.5, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Prop blade 2 white highlight tip
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-0.5, 24, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
         ctx.restore();
         ctx.shadowBlur = 0; // reset
       } else {

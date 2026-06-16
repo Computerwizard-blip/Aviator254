@@ -34,7 +34,7 @@ const INITIAL_TOURNAMENTS: Tournament[] = [
     type: 'Daily',
     prizePool: 15000,
     endsAt: '03h 41m 12s',
-    minBetToJoin: 0.50,
+    minBetToJoin: 50.00,
     progressPercent: 78,
     leaderboard: [
       { rank: 1, username: 'VIP_SlotsKing', points: 14200, prize: 5000 },
@@ -50,7 +50,7 @@ const INITIAL_TOURNAMENTS: Tournament[] = [
     type: 'Weekly',
     prizePool: 50000,
     endsAt: '4d 12h 09m',
-    minBetToJoin: 5.00,
+    minBetToJoin: 500.00,
     progressPercent: 45,
     leaderboard: [
       { rank: 1, username: 'AceSpeculat8', points: 41200, prize: 18000 },
@@ -79,11 +79,11 @@ export default function BonusesTournaments({
   const [reffStats, setReffStats] = useState<ReferralStats>({
     referralLink: 'https://casinohub.app/join?ref=francypendy',
     totalReferred: 14,
-    totalCommissions: 450.75,
+    totalCommissions: 45075.00,
     referredUsers: [
-      { username: 'AlphaSpinner', rewardEarned: 150.00, status: 'Verifed VIP', date: '2026-05-20' },
-      { username: 'JackpotJack', rewardEarned: 220.50, status: 'Verifed VIP', date: '2026-05-22' },
-      { username: 'DiceMaster7', rewardEarned: 80.25, status: 'Active Bettor', date: '2026-05-26' }
+      { username: 'AlphaSpinner', rewardEarned: 15000.00, status: 'Verifed VIP', date: '2026-05-20' },
+      { username: 'JackpotJack', rewardEarned: 22050.00, status: 'Verifed VIP', date: '2026-05-22' },
+      { username: 'DiceMaster7', rewardEarned: 8025.00, status: 'Active Bettor', date: '2026-05-26' }
     ]
   });
 
@@ -205,7 +205,7 @@ export default function BonusesTournaments({
 
                     <div className="text-right">
                       <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider">Prize Pool</span>
-                      <strong className="text-amber-400 text-base font-mono">${tour.prizePool.toLocaleString()}</strong>
+                      <strong className="text-amber-400 text-base font-mono">KSh {tour.prizePool.toLocaleString()}</strong>
                     </div>
                   </div>
 
@@ -214,7 +214,7 @@ export default function BonusesTournaments({
                   {/* Progressive clock bar */}
                   <div className="flex justify-between text-[10px] text-purple-300 font-mono">
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-purple-400" /> Ends In: {tour.endsAt}</span>
-                    <span>Min stake: ${tour.minBetToJoin.toFixed(2)}</span>
+                    <span>Min stake: KSh {tour.minBetToJoin.toFixed(2)}</span>
                   </div>
 
                   <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden">
@@ -240,7 +240,7 @@ export default function BonusesTournaments({
 
                           <div className="flex gap-4 items-center">
                             <span className="text-gray-400">{part.points.toLocaleString()} pts</span>
-                            <span className="text-emerald-400 font-bold font-sans">${part.prize.toLocaleString()}</span>
+                            <span className="text-emerald-400 font-bold font-sans">KSh {part.prize.toLocaleString()}</span>
                           </div>
                         </div>
                       );
@@ -292,12 +292,8 @@ export default function BonusesTournaments({
                     <strong className="text-sm text-white font-mono">x1.2 Multi</strong>
                   </div>
                   <div className="bg-black/20 p-3 rounded-lg border border-purple-900/10">
-                    <div className="text-[10px] text-gray-400 font-black uppercase font-sans">Daily Cashback</div>
-                    <strong className="text-sm text-white font-mono">5.0% flat</strong>
-                  </div>
-                  <div className="bg-black/20 p-3 rounded-lg border border-purple-900/10">
                     <div className="text-[10px] text-gray-400 font-black uppercase">Max Payout</div>
-                    <strong className="text-sm text-white font-mono">$10,000/day</strong>
+                    <strong className="text-sm text-white font-mono">KSh 1,000,000/day</strong>
                   </div>
                 </div>
               </div>
@@ -362,7 +358,7 @@ export default function BonusesTournaments({
 
                 <div className="bg-[#120822] p-3 rounded-lg border border-purple-900/10 text-center">
                   <span className="text-[10px] text-gray-400 block uppercase font-mono">Commission Balance</span>
-                  <strong className="text-lg font-mono text-amber-400">${reffStats.totalCommissions.toFixed(2)}</strong>
+                  <strong className="text-lg font-mono text-amber-400">KSh {reffStats.totalCommissions.toFixed(2)}</strong>
                 </div>
               </div>
 
@@ -390,7 +386,7 @@ export default function BonusesTournaments({
                               {user.status}
                             </span>
                           </td>
-                          <td className="py-2.5 text-right font-bold text-white">+${user.rewardEarned.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-bold text-white">+KSh {user.rewardEarned.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -429,7 +425,7 @@ export default function BonusesTournaments({
                     disabled={hasClaimedDaily}
                     className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-black uppercase text-xs tracking-widest rounded disabled:opacity-50"
                   >
-                    {hasClaimedDaily ? 'CLAIMED CHEST TODAY (Refreshes tomorrow)' : 'CLAIM FREE $10 BONUS CREDIT NOW'}
+                    {hasClaimedDaily ? 'CLAIMED CHEST TODAY (Refreshes tomorrow)' : 'CLAIM FREE KSh 1,000 BONUS CREDIT NOW'}
                   </button>
                 </div>
               </div>
@@ -450,7 +446,7 @@ export default function BonusesTournaments({
                 <div className="pt-4 flex justify-between items-center bg-[#07030e] p-3 rounded-lg border border-purple-900">
                   <div className="text-left">
                     <span className="text-[9px] text-gray-500 block uppercase">Insured Refund Available</span>
-                    <span className="text-sm font-semibold font-mono text-emerald-400">${wallet.cashbackBalance.toFixed(2)}</span>
+                    <span className="text-sm font-semibold font-mono text-emerald-400">KSh {wallet.cashbackBalance.toFixed(2)}</span>
                   </div>
                   <button 
                     onClick={() => {

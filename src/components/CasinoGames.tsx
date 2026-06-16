@@ -54,34 +54,34 @@ interface CasinoGamesProps {
 
 export const LISTED_GAMES: GameItem[] = [
   // SLOTS
-  { id: 'slot-classic', title: 'Fruit Mania 777', category: 'slots', provider: 'CasinoHub Original', emoji: '🍒', rtp: 96.5, minBet: 0.20, maxBet: 200, jackpotEligible: true },
-  { id: 'slot-video', title: 'Gates of Valhalla', category: 'slots', provider: 'Pragmatic Play', emoji: '🎰', rtp: 97.2, minBet: 0.10, maxBet: 100, jackpotEligible: true },
-  { id: 'slot-jackpot', title: 'Mega Moolah Gold', category: 'slots', provider: 'Microgaming', emoji: '👑', rtp: 95.8, minBet: 0.50, maxBet: 50, jackpotEligible: true },
-  { id: 'slot-megaways', title: 'Sweet Bonanza Extra', category: 'slots', provider: 'Megaways Inc', emoji: '🍭', rtp: 96.8, minBet: 0.20, maxBet: 150 },
-  { id: 'slot-3d', title: 'Necromancer Quest', category: 'slots', provider: 'Betsoft 3D', emoji: '💀', rtp: 96.1, minBet: 0.50, maxBet: 100 },
+  { id: 'slot-classic', title: 'Fruit Mania 777', category: 'slots', provider: 'CasinoHub Original', emoji: '🍒', rtp: 96.5, minBet: 10.00, maxBet: 100000, jackpotEligible: true },
+  { id: 'slot-video', title: 'Gates of Valhalla', category: 'slots', provider: 'Pragmatic Play', emoji: '🎰', rtp: 97.2, minBet: 10.00, maxBet: 100000, jackpotEligible: true },
+  { id: 'slot-jackpot', title: 'Mega Moolah Gold', category: 'slots', provider: 'Microgaming', emoji: '👑', rtp: 95.8, minBet: 10.00, maxBet: 100000, jackpotEligible: true },
+  { id: 'slot-megaways', title: 'Sweet Bonanza Extra', category: 'slots', provider: 'Megaways Inc', emoji: '🍭', rtp: 96.8, minBet: 10.00, maxBet: 100000 },
+  { id: 'slot-3d', title: 'Necromancer Quest', category: 'slots', provider: 'Betsoft 3D', emoji: '💀', rtp: 96.1, minBet: 10.00, maxBet: 100000 },
 
   // LIVE DEALER
-  { id: 'live-roulette', title: 'Lightning Roulette Live', category: 'live', provider: 'Evolution Gaming', emoji: '🎡', rtp: 97.3, minBet: 1.00, maxBet: 5000, liveDealerName: 'Sophia' },
-  { id: 'live-blackjack', title: 'VIP Blackjack Table', category: 'live', provider: 'Evolution Gaming', emoji: '🃏', rtp: 99.5, minBet: 5.00, maxBet: 10000, liveDealerName: 'Lucas' },
-  { id: 'live-baccarat', title: 'Speed Baccarat High Limits', category: 'live', provider: 'Pragmatic Live', emoji: '💎', rtp: 98.9, minBet: 10.00, maxBet: 25000, liveDealerName: 'Olivia' },
-  { id: 'live-poker', title: 'Texas Hold\'em Ultimate', category: 'live', provider: 'Playtech Live', emoji: '👑', rtp: 97.9, minBet: 5.00, maxBet: 5000, liveDealerName: 'Marcus' },
-  { id: 'live-sicbo', title: 'Super Sic Bo Live', category: 'live', provider: 'Evolution Gaming', emoji: '🎲', rtp: 97.2, minBet: 1.00, maxBet: 2000, liveDealerName: 'Chloe' },
-  { id: 'live-dragontiger', title: 'Dragon Tiger Fortune', category: 'live', provider: 'Asia Gaming', emoji: '🐯', rtp: 96.2, minBet: 2.00, maxBet: 3000, liveDealerName: 'Chen' },
+  { id: 'live-roulette', title: 'Lightning Roulette Live', category: 'live', provider: 'Evolution Gaming', emoji: '🎡', rtp: 97.3, minBet: 10.00, maxBet: 100000, liveDealerName: 'Sophia' },
+  { id: 'live-blackjack', title: 'VIP Blackjack Table', category: 'live', provider: 'Evolution Gaming', emoji: '🃏', rtp: 99.5, minBet: 10.00, maxBet: 100000, liveDealerName: 'Lucas' },
+  { id: 'live-baccarat', title: 'Speed Baccarat High Limits', category: 'live', provider: 'Pragmatic Live', emoji: '💎', rtp: 98.9, minBet: 10.00, maxBet: 100000, liveDealerName: 'Olivia' },
+  { id: 'live-poker', title: 'Texas Hold\'em Ultimate', category: 'live', provider: 'Playtech Live', emoji: '👑', rtp: 97.9, minBet: 10.00, maxBet: 100000, liveDealerName: 'Marcus' },
+  { id: 'live-sicbo', title: 'Super Sic Bo Live', category: 'live', provider: 'Evolution Gaming', emoji: '🎲', rtp: 97.2, minBet: 10.00, maxBet: 100000, liveDealerName: 'Chloe' },
+  { id: 'live-dragontiger', title: 'Dragon Tiger Fortune', category: 'live', provider: 'Asia Gaming', emoji: '🐯', rtp: 96.2, minBet: 10.00, maxBet: 100000, liveDealerName: 'Chen' },
 
   // TABLE GAMES
-  { id: 'table-euro-roulette', title: 'European Roulette Pro', category: 'table', provider: 'CasinoHub Original', emoji: '🎡', rtp: 97.3, minBet: 1.00, maxBet: 1000 },
-  { id: 'table-classic-blackjack', title: 'Classic Blackjack Multi-hand', category: 'table', provider: 'NetEnt', emoji: '🃏', rtp: 99.6, minBet: 1.00, maxBet: 5000 },
-  { id: 'table-vip-baccarat', title: 'Traditional Baccarat standard', category: 'table', provider: 'CasinoHub Original', emoji: '💎', rtp: 98.9, minBet: 1.00, maxBet: 2000 },
-  { id: 'table-poker-threecard', title: 'Three Card Poker', category: 'table', provider: 'NetEnt', emoji: '🃏', rtp: 96.6, minBet: 1.00, maxBet: 1000 },
+  { id: 'table-euro-roulette', title: 'European Roulette Pro', category: 'table', provider: 'CasinoHub Original', emoji: '🎡', rtp: 97.3, minBet: 10.00, maxBet: 100000 },
+  { id: 'table-classic-blackjack', title: 'Classic Blackjack Multi-hand', category: 'table', provider: 'NetEnt', emoji: '🃏', rtp: 99.6, minBet: 10.00, maxBet: 100000 },
+  { id: 'table-vip-baccarat', title: 'Traditional Baccarat standard', category: 'table', provider: 'CasinoHub Original', emoji: '💎', rtp: 98.9, minBet: 10.00, maxBet: 100000 },
+  { id: 'table-poker-threecard', title: 'Three Card Poker', category: 'table', provider: 'NetEnt', emoji: '🃏', rtp: 96.6, minBet: 10.00, maxBet: 100000 },
 
   // INSTANT WIN & CRASH
-  { id: 'instant-aviator', title: 'Aviator Crash', category: 'instant', provider: 'Spribe Original', emoji: '🚀', rtp: 97.0, minBet: 0.10, maxBet: 500 },
-  { id: 'instant-crush', title: 'Space Crush Arena', category: 'instant', provider: 'CasinoHub Original', emoji: '☄️', rtp: 97.5, minBet: 0.20, maxBet: 500 },
-  { id: 'instant-wheel', title: 'Mega Wheel Spin', category: 'instant', provider: 'Pragmatic Play', emoji: '🎡', rtp: 96.5, minBet: 0.50, maxBet: 1000 },
-  { id: 'instant-mines', title: 'Mines Gold Mines', category: 'instant', provider: 'CasinoHub Original', emoji: '💣', rtp: 98.0, minBet: 0.20, maxBet: 1000 },
-  { id: 'instant-plinko', title: 'Plinko Multi-drops', category: 'instant', provider: 'CasinoHub Original', emoji: '🎯', rtp: 99.0, minBet: 0.10, maxBet: 500 },
-  { id: 'instant-coinflip', title: 'Turbo Coin Flip', category: 'instant', provider: 'CasinoHub Original', emoji: '🪙', rtp: 98.5, minBet: 0.50, maxBet: 2000 },
-  { id: 'instant-dice', title: 'Master Roll Dice', category: 'instant', provider: 'CasinoHub Original', emoji: '🎲', rtp: 98.2, minBet: 0.10, maxBet: 3000 },
+  { id: 'instant-aviator', title: 'Aviator Crash', category: 'instant', provider: 'Spribe Original', emoji: '🚀', rtp: 97.0, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-crush', title: 'Space Crush Arena', category: 'instant', provider: 'CasinoHub Original', emoji: '☄️', rtp: 97.5, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-wheel', title: 'Mega Wheel Spin', category: 'instant', provider: 'Pragmatic Play', emoji: '🎡', rtp: 96.5, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-mines', title: 'Mines Gold Mines', category: 'instant', provider: 'CasinoHub Original', emoji: '💣', rtp: 98.0, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-plinko', title: 'Plinko Multi-drops', category: 'instant', provider: 'CasinoHub Original', emoji: '🎯', rtp: 99.0, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-coinflip', title: 'Turbo Coin Flip', category: 'instant', provider: 'CasinoHub Original', emoji: '🪙', rtp: 98.5, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-dice', title: 'Master Roll Dice', category: 'instant', provider: 'CasinoHub Original', emoji: '🎲', rtp: 98.2, minBet: 10.00, maxBet: 100000 },
 ];
 
 export default function CasinoGames({
@@ -186,6 +186,14 @@ export default function CasinoGames({
   const [copiedCode, setCopiedCode] = useState(false);
 
   const handleCopyReferralCode = () => {
+    if (authSessionMode === 'demo') {
+      triggerNotification(
+        '🔒 Demo Referral Locked',
+        'Demo practice profiles cannot distribute referrals.',
+        'general'
+      );
+      return;
+    }
     const refCode = userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`;
     navigator.clipboard.writeText(refCode);
     setCopiedCode(true);
@@ -519,9 +527,41 @@ export default function CasinoGames({
     const timer = setInterval(() => {
       setLiveDealerTime((prev) => {
         if (prev <= 1) {
-          const outcomeNum = Math.floor(Math.random() * 37);
+          const isReal = authSessionMode === 'real';
+          const winRate = isReal ? 0.30 : 0.60;
+          const shouldWinLive = (liveUserBetOn !== '') ? (Math.random() < winRate) : null;
+
+          let pickedColor: 'red' | 'black' | 'green';
+          let outcomeNum: number;
           const colors: ('red' | 'black' | 'green')[] = ['green', 'red', 'black'];
-          const pickedColor = outcomeNum === 0 ? 'green' : colors[outcomeNum % 2 + 1];
+
+          if (shouldWinLive !== null) {
+            if (shouldWinLive) {
+              pickedColor = liveUserBetOn as 'red' | 'black' | 'green';
+              if (pickedColor === 'green') {
+                outcomeNum = 0;
+              } else if (pickedColor === 'red') {
+                const evens = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36];
+                outcomeNum = evens[Math.floor(Math.random() * evens.length)];
+              } else {
+                const odds = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35];
+                outcomeNum = odds[Math.floor(Math.random() * odds.length)];
+              }
+            } else {
+              pickedColor = liveUserBetOn === 'red' ? 'black' : 'red';
+              if (pickedColor === 'red') {
+                const evens = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36];
+                outcomeNum = evens[Math.floor(Math.random() * evens.length)];
+              } else {
+                const odds = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35];
+                outcomeNum = odds[Math.floor(Math.random() * odds.length)];
+              }
+            }
+          } else {
+            outcomeNum = Math.floor(Math.random() * 37);
+            pickedColor = outcomeNum === 0 ? 'green' : colors[outcomeNum % 2 + 1];
+          }
+
           const combined = `${pickedColor.toUpperCase()} ${outcomeNum}`;
           
           setLiveDealerPrevWins(prevList => [combined, ...prevList.slice(0, 3)]);
@@ -533,7 +573,7 @@ export default function CasinoGames({
               const multi = liveUserBetOn === 'green' ? 35 : 2;
               const payout = betAmount * multi;
               awardWinnings(payout, 'Lightning Roulette Live', 'Live Studio Payout');
-              triggerNotification('Live Casino Win!', `You won KSh ${payout.toFixed(2)} on Sophia's Live Roulette!`, 'general');
+              triggerNotification('Live Casino Win!', `You won ${payout.toFixed(2)} sh on Sophia's Live Roulette!`, 'general');
             }
             setLiveUserBetOn('');
           }
@@ -592,6 +632,16 @@ export default function CasinoGames({
   };
 
   const deductFunds = (amount: number, gameTitle: string): boolean => {
+    // Rigidly enforce 10 sh and 100,000 sh bounds across all casino games
+    if (amount < 10) {
+      triggerNotification('Validation Error', 'The minimum stake or wager is 10 sh.', 'general');
+      return false;
+    }
+    if (amount > 100000) {
+      triggerNotification('Validation Error', 'The maximum stake or wager is 100,000 sh.', 'general');
+      return false;
+    }
+
     const isReal = authSessionMode === 'real';
     const balanceField = isReal ? 'realBalance' : 'demoBalance';
     const activeBalance = wallet[balanceField];
@@ -693,11 +743,38 @@ export default function CasinoGames({
         clearInterval(spinInterval);
         setIsSpinning(false);
         
-        const finalReels = [
-          icons[Math.floor(Math.random() * icons.length)],
-          icons[Math.floor(Math.random() * icons.length)],
-          icons[Math.floor(Math.random() * icons.length)]
-        ];
+        const isReal = authSessionMode === 'real';
+        const winRate = isReal ? 0.30 : 0.60;
+        const shouldWin = Math.random() < winRate;
+
+        let finalReels;
+        if (shouldWin) {
+          const winType = Math.random() < 0.15 ? 'jackpot' : 'double';
+          if (winType === 'jackpot') {
+            const sym = icons[Math.floor(Math.random() * icons.length)];
+            finalReels = [sym, sym, sym];
+          } else {
+            const sym1 = icons[Math.floor(Math.random() * icons.length)];
+            let sym2 = icons[Math.floor(Math.random() * icons.length)];
+            while (sym2 === sym1) {
+              sym2 = icons[Math.floor(Math.random() * icons.length)];
+            }
+            const arr = [sym1, sym1, sym2];
+            finalReels = arr.sort(() => Math.random() - 0.5);
+          }
+        } else {
+          let sym1 = icons[Math.floor(Math.random() * icons.length)];
+          let sym2 = icons[Math.floor(Math.random() * icons.length)];
+          while (sym2 === sym1) {
+            sym2 = icons[Math.floor(Math.random() * icons.length)];
+          }
+          let sym3 = icons[Math.floor(Math.random() * icons.length)];
+          while (sym3 === sym1 || sym3 === sym2) {
+            sym3 = icons[Math.floor(Math.random() * icons.length)];
+          }
+          finalReels = [sym1, sym2, sym3];
+        }
+
         setSlotsReels(finalReels);
 
         const unique = new Set(finalReels);
@@ -705,20 +782,20 @@ export default function CasinoGames({
           const winMultiplier = finalReels[0] === '🎰' ? 50 : finalReels[0] === '👑' ? 30 : finalReels[0] === '💎' ? 20 : 10;
           const totalWin = betAmount * winMultiplier;
           awardWinnings(totalWin, selectedGame?.title || 'Slots Mania', 'Slot Jackpot Win');
-          setSlotsStatus(`JACKPOT COMBO! 3x ${finalReels[0]} pays KSh ${totalWin.toFixed(2)}`);
-          triggerNotification('Big Slot Win!', `Stunning jackpot combo! You won KSh ${totalWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
+          setSlotsStatus(`JACKPOT COMBO! 3x ${finalReels[0]} pays ${totalWin.toFixed(2)} sh`);
+          triggerNotification('Big Slot Win!', `Stunning jackpot combo! You won ${totalWin.toFixed(2)} sh on ${selectedGame?.title}!`, 'jackpot');
 
           // Progressive Jackpot opportunity!
           if (Math.random() > 0.85 && selectedGame?.jackpotEligible) {
             const jpType = Math.random() > 0.8 ? 'Mega' : 'Major';
             const jpWin = jpType === 'Mega' ? jackpotPool.mega : jackpotPool.major;
             awardWinnings(jpWin, selectedGame?.title || 'Slots Mania', `Progressive ${jpType} Jackpot`);
-            triggerNotification('PROGRESSIVE JACKPOT WON!', `OMG! You hit the ${jpType} Jackpot for KSh ${jpWin.toFixed(2)} on ${selectedGame?.title}!`, 'jackpot');
+            triggerNotification('PROGRESSIVE JACKPOT WON!', `OMG! You hit the ${jpType} Jackpot for ${jpWin.toFixed(2)} sh on ${selectedGame?.title}!`, 'jackpot');
           }
         } else if (unique.size === 2) {
           const totalWin = betAmount * 1.5;
           awardWinnings(totalWin, selectedGame?.title || 'Slots Mania', 'Slot Match Win');
-          setSlotsStatus(`Double Combo! 2x identical symbols pays KSh ${totalWin.toFixed(2)}`);
+          setSlotsStatus(`Double Combo! 2x identical symbols pays ${totalWin.toFixed(2)} sh`);
         } else {
           setSlotsStatus('Bummer! No winning combinations. Tune your stakes and try again.');
         }
@@ -758,9 +835,18 @@ export default function CasinoGames({
         clearInterval(takeoffInterval);
         setCrashMessage(isAviator ? 'The Red Jet is cruising! Cash out now!' : 'Asteroid mining rocket ascending! Keep watch!');
         
-        // Randomized crash limit
-        const randSeed = Math.random();
-        const crashLimit = randSeed < 0.15 ? 1.05 : randSeed < 0.6 ? 2.5 : randSeed < 0.9 ? 7.0 : 15.0 + Math.random() * 20;
+        // Randomized crash limit based on practice mode (60% win opportunity) vs real money live mode (30% win opportunity)
+        const isReal = authSessionMode === 'real';
+        const winRate = isReal ? 0.30 : 0.60;
+        const allowsWinOpportunity = Math.random() < winRate;
+
+        let crashLimit;
+        if (allowsWinOpportunity) {
+          const randSeed = Math.random();
+          crashLimit = randSeed < 0.5 ? 2.0 + Math.random() * 3.0 : randSeed < 0.9 ? 5.0 + Math.random() * 8 : 13.0 + Math.random() * 15;
+        } else {
+          crashLimit = 1.01 + Math.random() * 0.34;
+        }
         let currMult = 1.0;
 
         crashIntervalRef.current = setInterval(() => {
@@ -836,6 +922,32 @@ export default function CasinoGames({
     const index = updated.findIndex(t => t.id === tileId);
     if (index === -1 || updated[index].revealed) return;
 
+    const isReal = authSessionMode === 'real';
+    const winRate = isReal ? 0.30 : 0.60;
+    const shouldBeSafe = Math.random() < winRate;
+
+    if (shouldBeSafe) {
+      if (updated[index].hasMine) {
+        const otherIndex = updated.findIndex(t => !t.revealed && !t.hasMine && t.id !== tileId);
+        if (otherIndex !== -1) {
+          updated[otherIndex].hasMine = true;
+          updated[index].hasMine = false;
+        } else {
+          updated[index].hasMine = false;
+        }
+      }
+    } else {
+      if (!updated[index].hasMine) {
+        const otherIndex = updated.findIndex(t => !t.revealed && t.hasMine && t.id !== tileId);
+        if (otherIndex !== -1) {
+          updated[otherIndex].hasMine = false;
+          updated[index].hasMine = true;
+        } else {
+          updated[index].hasMine = true;
+        }
+      }
+    }
+
     updated[index].revealed = true;
     
     if (updated[index].hasMine) {
@@ -878,13 +990,32 @@ export default function CasinoGames({
     if (isPlinkoDropping) return;
     if (!deductFunds(betAmount, 'Plinko Multi-drops')) return;
 
+    const isReal = authSessionMode === 'real';
+    const winRate = isReal ? 0.30 : 0.60;
+    const shouldWin = Math.random() < winRate;
+
     setIsPlinkoDropping(true);
     setPlinkoMultiplierSelected(null);
     const pathPoints = [];
     let initialX = 50; 
 
     for (let row = 0; row < 8; row++) {
-      const step = Math.random() > 0.5 ? 5.5 : -5.5;
+      let step;
+      if (row === 7) {
+        if (shouldWin) {
+          const chooseLeft = Math.random() > 0.5;
+          if (chooseLeft) {
+            initialX = 15 + Math.random() * 20; // range 15 to 35 -> guarantees mult 5.0 or 1.8
+          } else {
+            initialX = 65 + Math.random() * 20; // range 65 to 85 -> guarantees mult 5.0 or 1.8
+          }
+        } else {
+          initialX = 42 + Math.random() * 16; // range 42 to 58 -> guarantees mult 0.3 or 0.5
+        }
+        step = 0;
+      } else {
+        step = Math.random() > 0.5 ? 5.5 : -5.5;
+      }
       initialX = Math.max(10, Math.min(90, initialX + step));
       pathPoints.push({ x: initialX, y: (row + 1) * 11 });
     }
@@ -926,9 +1057,50 @@ export default function CasinoGames({
     setRouletteOutcome(null);
 
     setTimeout(() => {
-      const outcomeNum = Math.floor(Math.random() * 37);
-      const isRed = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(outcomeNum);
-      const color: 'red' | 'black' | 'green' = outcomeNum === 0 ? 'green' : (isRed ? 'red' : 'black');
+      const isReal = authSessionMode === 'real';
+      const winRate = isReal ? 0.30 : 0.60;
+      const shouldWin = Math.random() < winRate;
+
+      let outcomeNum;
+      let color: 'red' | 'black' | 'green';
+      const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+
+      if (shouldWin) {
+        if (rouletteSelectedNumber !== null) {
+          outcomeNum = rouletteSelectedNumber;
+          color = outcomeNum === 0 ? 'green' : (redNumbers.includes(outcomeNum) ? 'red' : 'black');
+        } else if (rouletteSelectedColor !== null) {
+          color = rouletteSelectedColor;
+          if (color === 'red') {
+            outcomeNum = redNumbers[Math.floor(Math.random() * redNumbers.length)];
+          } else if (color === 'black') {
+            const blackNumbers = Array.from({length: 37}, (_, i) => i).filter(n => n !== 0 && !redNumbers.includes(n));
+            outcomeNum = blackNumbers[Math.floor(Math.random() * blackNumbers.length)];
+          } else {
+            outcomeNum = 0;
+          }
+        } else {
+          outcomeNum = Math.floor(Math.random() * 37);
+          color = outcomeNum === 0 ? 'green' : (redNumbers.includes(outcomeNum) ? 'red' : 'black');
+        }
+      } else {
+        let attempts = 0;
+        let candidateNum = Math.floor(Math.random() * 37);
+        let candidateColor: 'red' | 'black' | 'green' = candidateNum === 0 ? 'green' : (redNumbers.includes(candidateNum) ? 'red' : 'black');
+        
+        while (attempts < 100) {
+          let matchesNumber = (rouletteSelectedNumber !== null && rouletteSelectedNumber === candidateNum);
+          let matchesColor = (rouletteSelectedColor !== null && rouletteSelectedColor === candidateColor);
+          if (!matchesNumber && !matchesColor) {
+            break;
+          }
+          candidateNum = Math.floor(Math.random() * 37);
+          candidateColor = candidateNum === 0 ? 'green' : (redNumbers.includes(candidateNum) ? 'red' : 'black');
+          attempts++;
+        }
+        outcomeNum = candidateNum;
+        color = candidateColor;
+      }
 
       setRouletteOutcome({ number: outcomeNum, color });
       setRouletteSpinning(false);
@@ -1023,15 +1195,57 @@ export default function CasinoGames({
       return { text: `${item.text}${suit}`, value: item.value };
     };
 
-    let dealer = [blackjackDealerCards[0], getCard()];
-    while (getCardsSum(dealer) < 17) {
-      dealer.push(getCard());
+    const isReal = authSessionMode === 'real';
+    const winRate = isReal ? 0.30 : 0.60;
+    const shouldWin = Math.random() < winRate;
+
+    const playerSum = getCardsSum(blackjackPlayerCards);
+    let dealer: { text: string; value: number }[] = [blackjackDealerCards[0]];
+
+    if (shouldWin) {
+      let attempts = 0;
+      let dealerCandidate = [blackjackDealerCards[0]];
+      while (attempts < 1000) {
+        dealerCandidate = [blackjackDealerCards[0], getCard()];
+        while (getCardsSum(dealerCandidate) < 17) {
+          dealerCandidate.push(getCard());
+        }
+        const sum = getCardsSum(dealerCandidate);
+        if (sum > 21 || sum < playerSum) {
+          dealer = dealerCandidate;
+          break;
+        }
+        attempts++;
+      }
+      if (attempts >= 1000) {
+        dealer = [blackjackDealerCards[0], { text: 'Q♠', value: 10 }, { text: 'K♦', value: 10 }];
+      }
+    } else {
+      let attempts = 0;
+      let dealerCandidate = [blackjackDealerCards[0]];
+      while (attempts < 1000) {
+        dealerCandidate = [blackjackDealerCards[0], getCard()];
+        while (getCardsSum(dealerCandidate) < 17) {
+          dealerCandidate.push(getCard());
+        }
+        const sum = getCardsSum(dealerCandidate);
+        if (sum <= 21 && sum >= playerSum) {
+          dealer = dealerCandidate;
+          break;
+        }
+        attempts++;
+      }
+      if (attempts >= 1000) {
+        dealer = [blackjackDealerCards[0], getCard()];
+        while (getCardsSum(dealer) < 17) {
+          dealer.push(getCard());
+        }
+      }
     }
 
     setBlackjackDealerCards(dealer);
     setBlackjackInGame(false);
 
-    const playerSum = getCardsSum(blackjackPlayerCards);
     const dealerSum = getCardsSum(dealer);
 
     if (dealerSum > 21) {
@@ -1083,8 +1297,10 @@ export default function CasinoGames({
     setWheelSpinning(true);
     setWheelSelectedItem(null);
 
-    // Enforce strict 50% Win Rate silently behind the scenes
-    const isWinOutcome = Math.random() < 0.50; // Exact 50% win probability
+    // Enforce strict Win Rate silently behind the scenes (60% Demo, 30% Real)
+    const isReal = authSessionMode === 'real';
+    const winRate = isReal ? 0.30 : 0.60;
+    const isWinOutcome = Math.random() < winRate;
     
     let rollIndex = 0;
     if (isWinOutcome) {
@@ -1141,7 +1357,11 @@ export default function CasinoGames({
     setCoinResult(null);
 
     setTimeout(() => {
-      const randResult: 'heads' | 'tails' = Math.random() > 0.5 ? 'heads' : 'tails';
+      const isReal = authSessionMode === 'real';
+      const winRate = isReal ? 0.30 : 0.60;
+      const shouldWin = Math.random() < winRate;
+      const randResult: 'heads' | 'tails' = shouldWin ? coinBetOn : (coinBetOn === 'heads' ? 'tails' : 'heads');
+
       setCoinResult(randResult);
       setIsCoinFlipping(false);
 
@@ -1164,7 +1384,29 @@ export default function CasinoGames({
     setDiceOutcomeValue(null);
 
     setTimeout(() => {
-      const outcome = parseFloat((Math.random() * 99.99).toFixed(2));
+      const isReal = authSessionMode === 'real';
+      const winRate = isReal ? 0.30 : 0.60;
+      const shouldWin = Math.random() < winRate;
+
+      let outcome: number;
+      if (shouldWin) {
+        if (diceBetType === 'over') {
+          const minRange = Math.min(99, diceTargetValue + 0.1);
+          outcome = parseFloat((minRange + Math.random() * (99.99 - minRange)).toFixed(2));
+        } else {
+          const maxRange = Math.max(1, diceTargetValue - 0.1);
+          outcome = parseFloat((Math.random() * maxRange).toFixed(2));
+        }
+      } else {
+        if (diceBetType === 'over') {
+          const maxRange = Math.max(0.01, diceTargetValue);
+          outcome = parseFloat((Math.random() * maxRange).toFixed(2));
+        } else {
+          const minRange = Math.min(99.98, diceTargetValue);
+          outcome = parseFloat((minRange + Math.random() * (99.99 - minRange)).toFixed(2));
+        }
+      }
+
       setDiceOutcomeValue(outcome);
       setDiceIsRolling(false);
 
@@ -1227,15 +1469,15 @@ export default function CasinoGames({
           {/* Config stake control panel */}
           <div className="bg-black/40 p-3.5 rounded-xl border border-purple-900/30 mb-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-xs text-purple-300 uppercase font-black">STAKE AMOUNT:</span>
-              <div className="flex items-center gap-1.5">
-                {[5, 10, 50, 100, 500].map((val) => (
+              <span className="text-xs text-purple-300 uppercase font-black font-sans">STAKE AMOUNT:</span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[10, 50, 200, 1000, 5000, 20000, 100000].map((val) => (
                   <button 
                     key={val}
                     onClick={() => setBetAmount(val)}
                     className={`px-3 py-1.5 rounded text-xs font-bold font-mono transition-all ${betAmount === val ? 'bg-amber-400 text-black shadow-md' : 'bg-[#18112b] text-purple-300 border border-purple-500/25 hover:bg-purple-900/20'}`}
                   >
-                    ${val}
+                    {val.toLocaleString()} sh
                   </button>
                 ))}
               </div>
@@ -1246,9 +1488,13 @@ export default function CasinoGames({
               <input 
                 type="number" 
                 value={betAmount} 
-                onChange={(e) => setBetAmount(Math.max(selectedGame.minBet, Number(e.target.value)))}
-                className="w-20 bg-[#0a0510] text-amber-400 text-center text-sm font-bold border border-purple-800/60 rounded py-1"
+                onChange={(e) => setBetAmount(Number(e.target.value))}
+                onBlur={() => setBetAmount(Math.max(10, Math.min(100000, betAmount || 10)))}
+                className="w-24 bg-[#0a0510] text-amber-400 text-center text-sm font-bold border border-purple-800/60 rounded py-1 px-1"
+                min={10}
+                max={100000}
               />
+              <span className="text-xs text-purple-300 font-bold">sh</span>
             </div>
           </div>
 
@@ -1276,7 +1522,7 @@ export default function CasinoGames({
                       {winOverlay.title || 'BIG WINNER!'}
                     </h4>
                     <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.3)] select-all font-mono">
-                      +KSh {winOverlay.amount.toFixed(2)}
+                      +{winOverlay.amount.toFixed(2)} sh
                     </p>
                   </div>
                   
@@ -1378,7 +1624,7 @@ export default function CasinoGames({
                         {simulatedPlayers.map((p, idx) => (
                           <div key={idx} className="flex justify-between items-center text-[9px] font-mono py-1 border-b border-purple-900/10">
                             <span className="text-purple-300 font-bold">{p.name}</span>
-                            <span className="text-gray-500">${p.bet}</span>
+                            <span className="text-gray-500">KSh {p.bet}</span>
                             {p.cashedOut ? (
                               <span className="text-[#22c55e] font-bold font-sans">x{p.mult}</span>
                             ) : crashActive ? (
@@ -1439,7 +1685,7 @@ export default function CasinoGames({
                     disabled={!crashActive || crashHasCashedOut}
                     className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-lg text-black font-extrabold text-xs uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-amber-500/20"
                   >
-                    CASH OUT (${(betAmount * crashMultiplier).toFixed(2)})
+                    CASH OUT ({(betAmount * crashMultiplier).toFixed(2)} sh)
                   </button>
                 </div>
 
@@ -1470,7 +1716,7 @@ export default function CasinoGames({
                     onClick={startMinesGame}
                     className="px-8 py-3 bg-amber-400 text-black font-black uppercase text-xs tracking-wider rounded-lg shadow-lg"
                   >
-                    DEPLOY STAKE BET (${betAmount})
+                    DEPLOY STAKE BET ({betAmount} sh)
                   </button>
                 ) : (
                   <div className="flex flex-col items-center">
@@ -1488,12 +1734,12 @@ export default function CasinoGames({
                     </div>
 
                     <div className="flex gap-2">
-                      <button 
+                       <button 
                         onClick={cashOutMines}
                         disabled={minesRevealedCount === 0 || minesGameOver}
                         className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded uppercase tracking-wider disabled:opacity-40"
                       >
-                        Secured payout (${(betAmount * (1 + (minesRevealedCount * (minesCount * 0.165)))).toFixed(2)})
+                        Secured payout ({(betAmount * (1 + (minesRevealedCount * (minesCount * 0.165)))).toFixed(2)} sh)
                       </button>
                       {minesGameOver && (
                         <button 
@@ -1658,7 +1904,7 @@ export default function CasinoGames({
                       onClick={initiateBlackjack}
                       className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold rounded text-xs uppercase"
                     >
-                      DEAL DECK STAKE (KSh {betAmount.toLocaleString()})
+                      DEAL DECK STAKE ({betAmount.toLocaleString()} sh)
                     </button>
                   </div>
                 )}
@@ -1942,7 +2188,7 @@ export default function CasinoGames({
 
                   <div className="flex justify-between items-center text-[10px] font-mono text-gray-400">
                     <span>Calculated Pay Multiplier: <strong className="text-amber-400">x{currentMultiplier}</strong></span>
-                    <span>Payout: <strong className="text-purple-300">KSh {(betAmount * currentMultiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                    <span>Payout: <strong className="text-purple-300">{(betAmount * currentMultiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sh</strong></span>
                   </div>
                 </div>
 
@@ -1976,9 +2222,9 @@ export default function CasinoGames({
           </div>
 
           <div className="mt-3.5 flex items-center justify-between text-[10px] text-purple-400/50">
-            <span>Minimum wager limit: KSh {selectedGame.minBet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>Minimum wager limit: {selectedGame.minBet.toLocaleString('en-US', { minimumFractionDigits: 2 })} sh</span>
             <span className="flex items-center gap-1">🛡️ Provably Fair RNG Verified</span>
-            <span>Maximum wager limit: KSh {selectedGame.maxBet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span>Maximum wager limit: {selectedGame.maxBet.toLocaleString('en-US', { minimumFractionDigits: 2 })} sh</span>
           </div>
 
         </div>
@@ -2498,19 +2744,27 @@ export default function CasinoGames({
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="text"
-                      readOnly
-                      value={userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`}
-                      className="flex-1 text-center bg-[#0d071a] border border-purple-900/50 rounded-lg p-2.5 text-xs font-mono font-bold text-amber-300 pointer-events-none select-all focus:outline-none uppercase"
-                    />
-                    <button 
-                      onClick={handleCopyReferralCode}
-                      className="px-3.5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-transform active:scale-95 cursor-pointer flex items-center justify-center shrink-0 border border-purple-400/20"
-                      title="Copy referral invitation code"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
+                    {authSessionMode === 'demo' ? (
+                      <div className="flex-1 text-center bg-[#0d071a] border border-zinc-800/40 rounded-lg p-2.5 text-xs font-mono font-bold text-zinc-500 select-none pointer-events-none tracking-wide">
+                        Ref-demo account 5682
+                      </div>
+                    ) : (
+                      <>
+                        <input 
+                          type="text"
+                          readOnly
+                          value={userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`}
+                          className="flex-1 text-center bg-[#0d071a] border border-purple-900/50 rounded-lg p-2.5 text-xs font-mono font-bold text-amber-300 pointer-events-none select-all focus:outline-none uppercase"
+                        />
+                        <button 
+                          onClick={handleCopyReferralCode}
+                          className="px-3.5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-transform active:scale-95 cursor-pointer flex items-center justify-center shrink-0 border border-purple-400/20"
+                          title="Copy referral invitation code"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                   
                   <div className="bg-[#120722] py-2.5 px-3 rounded-lg border border-purple-900/30 flex items-center justify-between">

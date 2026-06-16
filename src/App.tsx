@@ -139,6 +139,52 @@ export default function App() {
     };
   }, []);
 
+  // Lock the desktop & mobile viewports to prevent user from magnifying or scaling (enlarging or minimizing) the static layout
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent standard browser zoom hotkeys: Ctrl/Cmd and +, -, 0
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0' || e.key === '+' || e.key === '_')) {
+        e.preventDefault();
+      }
+    };
+
+    const handleGestureStart = (e: any) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    document.addEventListener('keydown', handleKeyDown, { passive: false });
+    document.addEventListener('gesturestart', handleGestureStart, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('gesturestart', handleGestureStart);
+    };
+  }, []);
+
   // Navigation & Workspace views state
   const [currentView, setView] = useState<'aviator' | 'lobby' | 'admin'>('lobby');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -550,14 +596,85 @@ export default function App() {
   ]);
 
   // Personal Bets Log
-  const [myBets, setMyBets] = useState<{
+  const [myBets, setMyBetsState] = useState<{
     amount: number;
     multiplier?: number;
     payout?: number;
     time: string;
     status: 'WON' | 'LOST' | 'ACTIVE';
     mode?: 'demo' | 'real';
-  }[]>([]);
+    timestamp?: number;
+  }[]>(() => {
+    const saved = localStorage.getItem('casinohub_my_bets');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Immediately filter out previous day's demo bets on init
+          const today = new Date();
+          return parsed.filter(bet => {
+            if (bet.mode === 'demo') {
+              if (!bet.timestamp) return false;
+              const betDate = new Date(bet.timestamp);
+              return betDate.getDate() === today.getDate() &&
+                     betDate.getMonth() === today.getMonth() &&
+                     betDate.getFullYear() === today.getFullYear();
+            }
+            return true;
+          });
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const setMyBets = (val: React.SetStateAction<{
+    amount: number;
+    multiplier?: number;
+    payout?: number;
+    time: string;
+    status: 'WON' | 'LOST' | 'ACTIVE';
+    mode?: 'demo' | 'real';
+    timestamp?: number;
+  }[]>) => {
+    setMyBetsState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      localStorage.setItem('casinohub_my_bets', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Midnight 12h Auto-Refresh for Demo Bets
+  useEffect(() => {
+    const checkAndClearDemoBets = () => {
+      setMyBetsState(prev => {
+        const today = new Date();
+        const filtered = prev.filter(bet => {
+          if (bet.mode === 'demo') {
+            if (!bet.timestamp) return false;
+            const betDate = new Date(bet.timestamp);
+            return betDate.getDate() === today.getDate() &&
+                   betDate.getMonth() === today.getMonth() &&
+                   betDate.getFullYear() === today.getFullYear();
+          }
+          return true; // Keep all real bets
+        });
+
+        if (filtered.length !== prev.length) {
+          localStorage.setItem('casinohub_my_bets', JSON.stringify(filtered));
+          return filtered;
+        }
+        return prev;
+      });
+    };
+
+    // Run right away
+    checkAndClearDemoBets();
+
+    // Check periodically for midnight crossing
+    const interval = setInterval(checkAndClearDemoBets, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Simulated live lobby bettors
   const [activePlayers, setActivePlayers] = useState<BetLogItem[]>([]);
@@ -768,7 +885,8 @@ export default function App() {
           amount: lostAmt1,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: 'LOST',
-          mode
+          mode,
+          timestamp: Date.now()
         },
         ...prev
       ]);
@@ -784,7 +902,8 @@ export default function App() {
           amount: lostAmt2,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           status: 'LOST',
-          mode
+          mode,
+          timestamp: Date.now()
         },
         ...prev
       ]);
@@ -1097,7 +1216,8 @@ export default function App() {
         payout: cashPayout,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'WON',
-        mode
+        mode,
+        timestamp: Date.now()
       },
       ...prev
     ]);
@@ -1397,10 +1517,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07080a] text-gray-100 flex flex-col justify-start items-center p-0 md:p-3 relative antialiased md:py-6 overflow-x-hidden">
+    <div className="h-screen w-screen bg-[#07080a] text-gray-100 flex flex-col justify-center items-center p-0 md:p-4 relative antialiased overflow-hidden">
       
       {/* Central Screen Frame */}
-      <div className="w-full max-w-lg md:max-w-2xl bg-[#0d0e10] rounded-none md:rounded-3xl border border-[#23252a] overflow-hidden flex flex-col min-h-screen md:min-h-[820px] shadow-[0_12px_60px_rgba(0,0,0,0.8)]">
+      <div className="w-full max-w-lg md:max-w-2xl bg-[#0d0e10] rounded-none md:rounded-3xl border border-[#23252a] overflow-y-auto flex flex-col h-full max-h-full md:h-[820px] md:max-h-[820px] shadow-[0_12px_60px_rgba(0,0,0,0.8)] shrink-0">
         
         {/* Dynamic Session Limit Alert Banner */}
         {showSessionAlert && (

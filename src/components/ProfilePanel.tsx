@@ -339,7 +339,7 @@ export default function ProfilePanel({
   }
 
   const currentBalance = authSessionMode === 'real' ? wallet.realBalance : wallet.demoBalance;
-  const referralCode = userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`;
+  const referralCode = authSessionMode === 'demo' ? 'Ref-demo account 5682' : (userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`);
 
   const handleCopyCode = () => {
     if (authSessionMode === 'demo') {
@@ -753,8 +753,8 @@ export default function ProfilePanel({
 
             {authSessionMode === 'demo' ? (
               <div className="space-y-3">
-                <div className="text-center bg-black/40 border border-zinc-800 rounded-lg p-2 font-mono font-black text-xs text-zinc-500 uppercase select-none tracking-wider">
-                  {referralCode}
+                <div className="text-center bg-black/40 border border-zinc-800 rounded-lg p-2 font-mono font-bold text-xs text-zinc-500 select-none pointer-events-none tracking-wide">
+                  Ref-demo account 5682
                 </div>
                 <div className="bg-black/50 p-2.5 rounded-lg border border-amber-500/10 text-[9.5px] leading-relaxed text-gray-300">
                   <span className="font-bold text-amber-400 uppercase tracking-wider block mb-1">💡 How Referrals Work:</span>

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Menu, ArrowLeft, Volume2, VolumeX, ShieldAlert, Bell, Gamepad2, User, Download, Settings } from 'lucide-react';
+import { Menu, ArrowLeft, Volume2, VolumeX, ShieldAlert, Bell, Gamepad2, User, Settings } from 'lucide-react';
 import { UserProfile } from '../types';
 // @ts-ignore
 import appLogo from '../assets/images/aviator_app_logo_1780602471546.png';
@@ -44,22 +44,8 @@ export default function AviatorHeader({
   onOpenDownloadApp,
   onOpenSettings
 }: AviatorHeaderProps) {
-  const [exitConfirm, setExitConfirm] = useState(false);
-  const exitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const handleBackClick = () => {
-    if (exitConfirm) {
-      if (exitTimeoutRef.current) {
-        clearTimeout(exitTimeoutRef.current);
-      }
-      setExitConfirm(false);
-      if (setView) setView('lobby');
-    } else {
-      setExitConfirm(true);
-      exitTimeoutRef.current = setTimeout(() => {
-        setExitConfirm(false);
-      }, 3000);
-    }
+    if (setView) setView('lobby');
   };
 
   return (
@@ -68,15 +54,11 @@ export default function AviatorHeader({
       {currentView !== 'lobby' ? (
         <button 
           onClick={handleBackClick}
-          className={`flex items-center gap-1.5 transition-all text-xs font-semibold cursor-pointer border rounded px-2.5 py-1.5 ${
-            exitConfirm 
-              ? 'border-red-500 bg-red-950/65 text-red-100 font-bold animate-pulse' 
-              : 'border-gray-800 bg-black/25 text-[#9b9da4] hover:text-[#d1d2d6]'
-          }`}
-          title="Click again to exit back to Casino grounds"
+          className="flex items-center gap-1.5 transition-all text-xs font-semibold cursor-pointer border rounded px-2.5 py-1.5 border-gray-800 bg-black/25 text-[#9b9da4] hover:text-[#d1d2d6]"
+          title="Exit back to Casino grounds"
         >
-          <ArrowLeft className={`w-3.5 h-3.5 transition-colors ${exitConfirm ? 'text-red-400' : 'text-amber-500'}`} />
-          <span>{exitConfirm ? "Click again to exit" : "Back"}</span>
+          <ArrowLeft className="w-3.5 h-3.5 text-amber-500 hover:text-amber-400" />
+          <span>Back</span>
         </button>
       ) : (
         <div className="flex items-center gap-1.5 text-amber-500 text-xs font-black uppercase tracking-wider">
@@ -128,79 +110,9 @@ export default function AviatorHeader({
 
 
 
-        {/* Glowing Download App Button */}
-        {onOpenDownloadApp && (
-          <button
-            onClick={onOpenDownloadApp}
-            className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-red-500/20 bg-[#251012] hover:bg-[#3d1317] text-[#ff375f] hover:text-red-300 transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-wider cursor-pointer active:scale-95 duration-150 shadow-[0_0_10px_rgba(239,68,68,0.15)] hover:shadow-[0_0_14px_rgba(239,68,68,0.3)] select-none shrink-0"
-            title="Download the official iOS & Android App to receive KSh 1,000 Free Credits"
-          >
-            <Download className="w-3.5 h-3.5 text-[#ff375f] animate-bounce shrink-0" />
-            <span className="hidden xs:inline">Install App</span>
-            <span className="leading-none scale-90 bg-[#ff375f] text-white text-[7.5px] px-1 py-0.5 rounded-full animate-pulse font-mono font-black">+1K</span>
-          </button>
-        )}
 
-        {/* Dynamic global Notification bells */}
-        <div className="relative">
-          <button 
-            onClick={onToggleNotifications}
-            className={`w-7.5 h-7.5 flex items-center justify-center rounded transition-all active:scale-92 cursor-pointer border border-[#25282e] hover:bg-[#25282e] ${notificationsCount > 0 ? 'text-amber-400 hover:text-amber-300' : 'text-[#9b9da4] hover:text-white'}`}
-            title="Lobby Alerts Feed"
-          >
-            <Bell className="w-3.5 h-3.5" />
-            {notificationsCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-600 px-1 text-[7.5px] font-black text-white select-none animate-pulse">
-                {notificationsCount}
-              </span>
-            )}
-          </button>
-        </div>
 
-        {/* Global Sound Toggle Option */}
-        <button 
-          onClick={onToggleMute}
-          className={`w-7.5 h-7.5 flex items-center justify-center rounded transition-all active:scale-92 cursor-pointer border border-[#25282e] ${muted ? 'text-red-500 hover:text-red-400 bg-red-950/10' : 'text-[#9b9da4] hover:text-white hover:bg-[#25282e]'}`}
-          title={muted ? "Unmute sound effects" : "Mute sound effects"}
-        >
-          {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-        </button>
 
-        {/* Responsible Gaming & Profile toggle */}
-        <button 
-          onClick={onOpenResponsibleGaming}
-          className="w-7.5 h-7.5 flex items-center justify-center text-emerald-400 hover:text-emerald-300 bg-emerald-950/10 hover:bg-emerald-950/20 border border-emerald-500/10 rounded transition-colors active:scale-90 cursor-pointer"
-          title="Responsible Gaming & Safety Controls"
-        >
-          <Menu className="w-4 h-4" />
-        </button>
-
-        {/* Settings button */}
-        {onOpenSettings && (
-          <button 
-            id="settings-header-btn"
-            onClick={onOpenSettings}
-            className="w-7.5 h-7.5 flex items-center justify-center text-[#9b9da4] hover:text-white bg-black/45 hover:bg-[#25282e] border border-[#25282e] rounded transition-all active:scale-[0.88] cursor-pointer"
-            title="Adjust Account Settings (Sound, Full name, Photo)"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        )}
-
-        {/* Real Aviator-Like User Profile Badge */}
-        {userProfile && (
-          <button
-            onClick={onOpenProfile}
-            className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#e21515] to-[#ff4747] border-2 border-red-500/50 hover:border-red-400 flex items-center justify-center text-white text-[10px] font-black tracking-tight cursor-pointer shadow-[0_0_12px_rgba(226,21,21,0.3)] hover:shadow-[0_0_16px_rgba(226,21,21,0.5)] transition-all active:scale-[0.88] uppercase shrink-0 select-none overflow-hidden"
-            title="Open Account Profile Drawer"
-          >
-            {userProfile.avatar && (userProfile.avatar.startsWith('data:image/') || userProfile.avatar.startsWith('http://') || userProfile.avatar.startsWith('https://')) ? (
-              <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-            ) : (
-              userProfile.avatar || userProfile.fullName?.substring(0, 2).toUpperCase() || userProfile.username.substring(0, 2).toUpperCase()
-            )}
-          </button>
-        )}
       </div>
     </header>
   );

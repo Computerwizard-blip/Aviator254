@@ -46,61 +46,9 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
 
   const performConnectionAudit = async () => {
     setIsMeasuringConnection(true);
-    try {
-      // 1. Offline Check
-      if (!window.navigator.onLine) {
-        setConnectionErrorReason('OFFLINE');
-        setIsFreeBasicsOrLowDataBlocked(true);
-        return;
-      }
-
-      // 2. Data Saver & Throttled Connection check
-      const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-      if (conn) {
-        if (conn.saveData) {
-          setConnectionErrorReason('DATA_SAVER_ACTIVE');
-          setIsFreeBasicsOrLowDataBlocked(true);
-          return;
-        }
-        if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
-          setConnectionErrorReason('SLOW_2G_CONNECTION');
-          setIsFreeBasicsOrLowDataBlocked(true);
-          return;
-        }
-      }
-
-      // 3. Roundtrip Latency Ping Check
-      const startTime = performance.now();
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1200); // 1.2s timeout representing slow/throttled basic connection
-
-        await fetch('/favicon.ico', { 
-          method: 'HEAD', 
-          cache: 'no-store',
-          signal: controller.signal 
-        });
-        clearTimeout(timeoutId);
-
-        const duration = performance.now() - startTime;
-        if (duration > 1000) {
-          // Extraordinarily high latency representing zero-balance basic tunnels
-          setConnectionErrorReason('UNEXPECTED_HIGH_LATENCY');
-          setIsFreeBasicsOrLowDataBlocked(true);
-        } else {
-          setIsFreeBasicsOrLowDataBlocked(false);
-          setConnectionErrorReason('');
-        }
-      } catch (err) {
-        // High risk blocked network context
-        setConnectionErrorReason('UNEXPECTED_HIGH_LATENCY');
-        setIsFreeBasicsOrLowDataBlocked(true);
-      }
-    } catch (e) {
-      setIsFreeBasicsOrLowDataBlocked(false);
-    } finally {
-      setIsMeasuringConnection(false);
-    }
+    setIsFreeBasicsOrLowDataBlocked(false);
+    setConnectionErrorReason('');
+    setIsMeasuringConnection(false);
   };
 
   useEffect(() => {
@@ -165,26 +113,27 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
       }
     }
 
-    if (cleanName !== 'frank janal') {
-      setFormError('Account creation blocked. Authorized full name is restricted to "frank janal".');
+    if (fullName.trim().length < 2) {
+      setFormError('Please enter your valid full name (minimum 2 chars).');
       return;
     }
-    const isKenyanLine = selectedCountry.code === 'KE' && (cleanPhone === '117051321' || cleanPhone === '0117051321' || cleanPhone === '7051321');
-    if (!isKenyanLine) {
-      setFormError('Account creation blocked. Authorized phone number is restricted to Kenyan line "0117051321".');
+
+    if (phone.trim().length < 6) {
+      setFormError('Please enter a valid phone number.');
       return;
     }
-    if (password !== '4298') {
-      setFormError('Account creation blocked. Authorized Access PIN is restricted to "4298".');
+
+    if (password.length < 4) {
+      setFormError('Please set a password of at least 4 characters.');
       return;
     }
 
     const newAccount = {
-      fullName: 'Frank Janal',
-      phone: '0117051321', // exact key
+      fullName: fullName.trim(),
+      phone: phone.trim(),
       dialCode: selectedCountry.dialCode,
       countryCode: selectedCountry.code,
-      password: '4298'
+      password: password
     };
 
     localStorage.setItem('casinohub_registered_account', JSON.stringify(newAccount));
@@ -495,7 +444,7 @@ export default function WelcomingIntro({ onLoginSuccess }: WelcomingIntroProps) 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full bg-black/40 border border-purple-900/50 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
-                    placeholder="e.g. Francis Pendy"
+                    placeholder=""
                   />
                 </div>
               </div>
