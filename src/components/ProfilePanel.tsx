@@ -339,17 +339,9 @@ export default function ProfilePanel({
   }
 
   const currentBalance = authSessionMode === 'real' ? wallet.realBalance : wallet.demoBalance;
-  const referralCode = authSessionMode === 'demo' ? 'Ref-demo account 5682' : (userProfile.referralCode || `REF-${userProfile.username.toUpperCase()}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`);
+  const referralCode = userProfile.referralCode || `REF-${(userProfile.fullName || userProfile.username).trim().toUpperCase().replace(/[^A-Z0-9]/g, '')}-${userProfile.phone ? userProfile.phone.replace(/[^0-9]/g, '').slice(-4) : '7777'}`;
 
   const handleCopyCode = () => {
-    if (authSessionMode === 'demo') {
-      triggerNotification(
-        '🔒 Live Referrals Disabled',
-        'Demo practice profiles cannot distribute referrals. Click "Sign In for Real Account" to register and start earning!',
-        'general'
-      );
-      return;
-    }
     navigator.clipboard.writeText(referralCode);
     setCopiedCode(true);
     triggerNotification(

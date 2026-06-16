@@ -1585,7 +1585,7 @@ export default function App() {
               className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${currentView === 'aviator' ? 'bg-[#e21515] text-[#fff] shadow-[0_0_12px_rgba(226,21,21,0.3)]' : 'bg-black/15 text-[#9b9da4] hover:text-[#d1d2d6]'}`}
             >
               <span>🚀</span>
-              <span className="uppercase">Aviator</span>
+              <span className="uppercase">JETCASH</span>
             </button>
             <button
               onClick={() => { setView('lobby'); setIsNotificationsOpen(false); }}

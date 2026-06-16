@@ -75,7 +75,7 @@ export const LISTED_GAMES: GameItem[] = [
   { id: 'table-poker-threecard', title: 'Three Card Poker', category: 'table', provider: 'NetEnt', emoji: '🃏', rtp: 96.6, minBet: 10.00, maxBet: 100000 },
 
   // INSTANT WIN & CRASH
-  { id: 'instant-aviator', title: 'Aviator Crash', category: 'instant', provider: 'Spribe Original', emoji: '🚀', rtp: 97.0, minBet: 10.00, maxBet: 100000 },
+  { id: 'instant-aviator', title: 'JETCASH', category: 'instant', provider: 'Spribe Original', emoji: '🚀', rtp: 97.0, minBet: 10.00, maxBet: 100000 },
   { id: 'instant-crush', title: 'Space Crush Arena', category: 'instant', provider: 'CasinoHub Original', emoji: '☄️', rtp: 97.5, minBet: 10.00, maxBet: 100000 },
   { id: 'instant-wheel', title: 'Mega Wheel Spin', category: 'instant', provider: 'Pragmatic Play', emoji: '🎡', rtp: 96.5, minBet: 10.00, maxBet: 100000 },
   { id: 'instant-mines', title: 'Mines Gold Mines', category: 'instant', provider: 'CasinoHub Original', emoji: '💣', rtp: 98.0, minBet: 10.00, maxBet: 100000 },
@@ -807,7 +807,7 @@ export default function CasinoGames({
   const launchCrashGame = () => {
     if (crashActive) return;
     const isAviator = selectedGame?.id === 'instant-aviator';
-    const gameLabel = isAviator ? 'Aviator Crash' : 'Space Crush Arena';
+    const gameLabel = isAviator ? 'JETCASH' : 'Space Crush Arena';
     
     if (!deductFunds(betAmount, gameLabel)) return;
 
@@ -896,7 +896,7 @@ export default function CasinoGames({
 
   const manualCrashCashOut = () => {
     if (!crashBetPlaced || crashHasCashedOut) return;
-    const gameLabel = selectedGame?.id === 'instant-aviator' ? 'Aviator Crash' : 'Space Crush Arena';
+    const gameLabel = selectedGame?.id === 'instant-aviator' ? 'JETCASH' : 'Space Crush Arena';
 
     setCrashHasCashedOut(true);
     const payout = parseFloat((betAmount * crashMultiplier).toFixed(2));

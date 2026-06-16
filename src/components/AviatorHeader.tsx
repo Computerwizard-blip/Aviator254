@@ -73,7 +73,7 @@ export default function AviatorHeader({
           <img src={appLogo} alt="App Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
         </div>
         <span className={`text-sm sm:text-base font-black italic tracking-wide uppercase transition-transform duration-300 ${currentView === 'aviator' ? 'text-[#e21515] drop-shadow-[0_2px_4px_rgba(226,21,21,0.25)]' : 'text-purple-400 drop-shadow-[0_2px_4px_rgba(168,85,247,0.25)]'}`}>
-          {currentView === 'aviator' ? 'Aviator' : 'CasinoHub'}
+          {currentView === 'aviator' ? 'JETCASH' : 'CasinoHub'}
         </span>
       </div>
 
