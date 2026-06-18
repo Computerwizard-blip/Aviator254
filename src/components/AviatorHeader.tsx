@@ -54,16 +54,15 @@ export default function AviatorHeader({
       {currentView !== 'lobby' ? (
         <button 
           onClick={handleBackClick}
-          className="flex items-center gap-1.5 transition-all text-xs font-semibold cursor-pointer border rounded px-2.5 py-1.5 border-gray-800 bg-black/25 text-[#9b9da4] hover:text-[#d1d2d6]"
+          className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 transition-all rounded-lg border border-[#212327] hover:border-[#2b2d32] bg-[#1a1b1e]/60 hover:bg-[#1a1b1e] text-amber-500 hover:text-amber-400 active:scale-90 cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.05)] hover:shadow-[0_0_14px_rgba(245,158,11,0.15)]"
           title="Exit back to Casino grounds"
+          id="exit-game-btn"
         >
-          <ArrowLeft className="w-3.5 h-3.5 text-amber-500 hover:text-amber-400" />
-          <span>Back</span>
+          <Gamepad2 className="w-5 h-5 text-amber-500 hover:scale-105 transition-transform" />
         </button>
       ) : (
-        <div className="flex items-center gap-1.5 text-amber-500 text-xs font-black uppercase tracking-wider">
+        <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-[#212327] bg-[#1a1b1e]/40 text-amber-500/80">
           <Gamepad2 className="w-4 h-4 text-amber-500 animate-pulse" />
-          <span className="hidden sm:inline">Casino Grounds</span>
         </div>
       )}
 

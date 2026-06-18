@@ -365,7 +365,7 @@ export default function AviatorGameViewport({
   return (
     <div 
       ref={containerRef}
-      className="md:rounded-2xl rounded-xl relative shadow-inner select-none overflow-hidden h-[300px] w-full border border-red-500/10 flex flex-col justify-center items-center"
+      className="md:rounded-2xl rounded-xl relative shadow-inner select-none overflow-hidden h-[150px] xs:h-[180px] sm:h-[220px] md:h-[260px] lg:h-[300px] w-full border border-red-500/10 flex flex-col justify-center items-center"
     >
       {/* 1. Underlying Render Canvas (Smooth 60FPS drawing grids and red flights) */}
       <canvas 
@@ -389,40 +389,40 @@ export default function AviatorGameViewport({
       </div>
 
       {/* 3. CENTER OVERLAY CONTENT: Dynamic multipliers counting or Pre-flight indicators */}
-      <div className="absolute inset-0 flex flex-col justify-center items-center z-10 select-none pointer-events-none text-center">
+      <div className="absolute inset-0 flex flex-col justify-center items-center z-10 select-none pointer-events-none text-center px-4">
         
         {/* Render active multipliers text as plane is soared! */}
         {crashActive ? (
           <div className="animate-scaleUp">
             {/* Massive Glowing Counter - Matches photographs */}
-            <div className="text-6xl md:text-7xl font-sans font-black text-white px-6 drop-shadow-[0_4px_15px_rgba(255,255,255,0.2)] select-none">
+            <div className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl font-sans font-black text-white px-2 sm:px-6 drop-shadow-[0_4px_15px_rgba(255,255,255,0.2)] select-none">
               {crashMultiplier.toFixed(2)}x
             </div>
-            <div className="text-[10px] text-[#ff3333] font-mono font-semibold tracking-widest uppercase mt-1 animate-pulse">
+            <div className="text-[9px] sm:text-[10px] text-[#ff3333] font-mono font-semibold tracking-widest uppercase mt-0.5 sm:mt-1 animate-pulse">
               Red Plane ascending!
             </div>
           </div>
         ) : (
-          <div className="px-6 py-4 rounded-xl bg-black/45 backdrop-blur-xs select-none max-w-xs animate-fadeIn pointer-events-auto">
+          <div className="px-4 py-2 sm:px-6 sm:py-4 rounded-xl bg-black/50 backdrop-blur-xs select-none max-w-[280px] xs:max-w-xs animate-fadeIn pointer-events-auto">
             
             {/* Pre-flight Countdown overlay indicator */}
             {countdownValue !== null ? (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-1.5 sm:gap-2">
                 {/* Propeller mini spinning graphic inside preflight lobby */}
-                <div className="w-10 h-10 rounded-full border border-red-500/30 flex items-center justify-center bg-red-950/20 text-red-500 text-lg animate-spin">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-red-500/30 flex items-center justify-center bg-red-950/20 text-red-500 text-sm sm:text-lg animate-spin">
                   ✈️
                 </div>
                 
-                <h5 className="text-xs uppercase font-extrabold tracking-widest text-[#9b9da4]">
+                <h5 className="text-[9px] sm:text-xs uppercase font-extrabold tracking-widest text-[#9b9da4]">
                   WAIT FOR UPCOMING ROUND
                 </h5>
                 
                 {/* Visual bar counting down */}
-                <div className="text-3xl font-mono font-black text-white leading-none tracking-tight">
+                <div className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-mono font-black text-white leading-none tracking-tight">
                   NEXT ROUND IN <span className="text-[#00e600]">{countdownValue.toFixed(1)}s</span>
                 </div>
 
-                <div className="w-36 h-1 w-full bg-red-900/30 rounded-full overflow-hidden mt-1 px-0.5">
+                <div className="w-28 sm:w-36 h-1 bg-red-900/30 rounded-full overflow-hidden mt-0.5 px-0.5">
                   <div 
                     className="h-full bg-[#00e600] rounded-full transition-all duration-100 ease-linear"
                     style={{ width: `${(countdownValue / 5) * 100}%` }}
@@ -430,24 +430,24 @@ export default function AviatorGameViewport({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-1 text-center">
+              <div className="flex flex-col items-center gap-0.5 sm:gap-1 text-center">
                 
                 {/* Flew Away / Burst Multiplier Display */}
                 {crashStatusMessage.includes('FLEW AWAY') ? (
                   <div>
-                    <h3 className="text-white text-xs uppercase font-black tracking-[0.2em] text-[#ff3333] select-none block leading-none mb-1">
+                    <h3 className="text-white text-[10px] sm:text-xs uppercase font-black tracking-[0.2em] text-[#ff3333] select-none block leading-none mb-1">
                       FLEW AWAY!
                     </h3>
-                    <div className="text-5xl font-sans font-black text-[#ff3333] drop-shadow-[0_2px_8px_rgba(255,51,51,0.4)] select-none">
+                    <div className="text-3xl xs:text-4xl sm:text-5xl font-sans font-black text-[#ff3333] drop-shadow-[0_2px_8px_rgba(255,51,51,0.4)] select-none">
                       {crashMultiplier.toFixed(2)}x
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <div className="text-xs text-[#a0a2aa] uppercase font-bold tracking-widest mb-1 select-none">
+                    <div className="text-[10px] sm:text-xs text-[#a0a2aa] uppercase font-bold tracking-widest mb-0.5 sm:mb-1 select-none">
                       {crashStatusMessage}
                     </div>
-                    <div className="text-sm font-semibold text-red-500/80 animate-pulse">
+                    <div className="text-xs sm:text-sm font-semibold text-red-500/80 animate-pulse">
                       System loaded & ready KSh
                     </div>
                   </div>

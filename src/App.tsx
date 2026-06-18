@@ -1645,8 +1645,8 @@ export default function App() {
               />
             </div>
 
-            {/* BOTTOM ACTIVE BET CONTROL CONSOLES */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 px-3 pb-3 bg-[#0d0e10]">
+            {/* BOTTOM ACTIVE BET CONTROL CONSOLES - Side-by-side on all screens */}
+            <div className="grid grid-cols-2 gap-1.5 xs:gap-2 sm:gap-3 px-1.5 xs:px-2 sm:px-3 pb-2 sm:pb-3 bg-[#0d0e10]">
               <AviatorBetPanel 
                 panelId="panel1"
                 balance={balance}
