@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Users, Clock, History, Trophy, TrendingUp, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, Clock, History, Trophy, TrendingUp, Check, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { UserProfile } from '../types';
+import { ChatMessage } from './GlobalChatDrawer';
 
 interface BetLogItem {
   id: string;
@@ -33,6 +34,10 @@ interface BetsLedgerProps {
   multipliers: number[];
   roundIndex?: number;
   userProfile?: UserProfile;
+  chatMessages?: ChatMessage[];
+  onSendMessage?: (text: string) => void;
+  onlineCount?: number;
+  onlinePlayersCount?: number;
 }
 
 const USERS_LIST = [
@@ -114,9 +119,13 @@ export default function BetsLedger({
   crashMultiplier,
   multipliers,
   roundIndex,
-  userProfile
+  userProfile,
+  chatMessages = [],
+  onSendMessage,
+  onlineCount = 12,
+  onlinePlayersCount = 1750
 }: BetsLedgerProps) {
-  const [activeTab, setActiveTab] = useState<'all' | 'my' | 'top' | 'chart'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'my' | 'top' | 'chat' | 'chart'>('all');
   const [topRoundMultiplier, setTopRoundMultiplier] = useState<number>(312.42);
 
   const getUserVipLevel = (username: string): 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Elite' => {
@@ -241,44 +250,75 @@ export default function BetsLedger({
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-scroll chat log on activeTab or chatMessages changes
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      const container = document.getElementById('ledger-chat-messages');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+  }, [chatMessages, activeTab]);
+
+  // Calculate dynamic active bets count relating to the active flight round's players
+  // It naturally scales and declines beautifully in sync with the round's active users!
+  const allBetsCount = onlinePlayersCount;
+
   return (
     <div className="bg-[#141518] rounded-2xl border border-[#212327] overflow-hidden select-none font-sans shrink-0">
       {/* 1. Statistics Tabs Selectors Bar */}
-      <div className="flex bg-[#0d0e10] p-1 border-b border-[#212327]">
+      <div className="flex bg-[#0d0e10] p-1 border-b border-[#212327] gap-0.5">
         <button 
           onClick={() => setActiveTab('all')}
-          className={`flex-1 py-2 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer ${activeTab === 'all' ? 'bg-[#1b1c21] text-white shadow' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
+          className={`flex-1 py-1.5 px-1 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer min-w-0 ${activeTab === 'all' ? 'bg-[#1b1c21] text-white shadow' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
         >
-          <Users className="w-3.5 h-3.5" />
-          <span className="hidden xs:inline">All Bets</span>
-          <span className="xs:hidden">All</span>
+          <Users className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden sm:inline">All Bets</span>
+          <span className="sm:hidden text-[10px]">All</span>
+          <span className="bg-purple-950/40 text-purple-400 border border-purple-500/15 text-[9px] px-1.5 py-0.5 rounded-full font-black scale-90 shrink-0">
+            {allBetsCount}
+          </span>
         </button>
 
         <button 
           onClick={() => setActiveTab('my')}
-          className={`flex-1 py-2 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer ${activeTab === 'my' ? 'bg-[#1b1c21] text-white shadow' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
+          className={`flex-1 py-1.5 px-1 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer min-w-0 ${activeTab === 'my' ? 'bg-[#1b1c21] text-white shadow' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
         >
-          <Clock className="w-3.5 h-3.5" />
-          <span className="hidden xs:inline">My Bets</span>
-          <span className="xs:hidden">My</span>
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden sm:inline">My Bets</span>
+          <span className="sm:hidden text-[10px]">My</span>
+          {myBets.length > 0 && (
+            <span className="bg-emerald-950/40 text-emerald-400 border border-emerald-500/15 text-[9px] px-1.5 py-0.5 rounded-full font-black scale-90 shrink-0">
+              {myBets.length}
+            </span>
+          )}
         </button>
 
         <button 
           onClick={() => setActiveTab('top')}
-          className={`flex-1 py-2 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer ${activeTab === 'top' ? 'bg-[#1b1c21] text-white shadow' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
+          className={`flex-1 py-1.5 px-1 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer min-w-0 ${activeTab === 'top' ? 'bg-[#1b1c21] text-white shadow' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
         >
-          <Trophy className="w-3.5 h-3.5" />
-          <span className="hidden xs:inline">Top</span>
-          <span className="xs:hidden">Top</span>
+          <Trophy className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden sm:inline">Top</span>
+          <span className="sm:hidden text-[10px]">Top</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('chat')}
+          className={`flex-1 py-1.5 px-1 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer min-w-0 ${activeTab === 'chat' ? 'bg-red-950/20 text-amber-500 border border-amber-500/30 font-sans' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <span className="hidden sm:inline">Chat</span>
+          <span className="sm:hidden text-[10px]">Chat</span>
         </button>
 
         <button 
           onClick={() => setActiveTab('chart')}
-          className={`flex-1 py-2 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer ${activeTab === 'chart' ? 'bg-red-950/20 text-[#e21515] border border-red-500/30' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
+          className={`flex-1 py-1.5 px-1 text-xs font-bold transition-all rounded-lg flex items-center justify-center gap-1 cursor-pointer min-w-0 ${activeTab === 'chart' ? 'bg-red-950/20 text-[#e21515] border border-red-500/30' : 'text-[#8e9099] hover:text-[#d1d2d6]'}`}
         >
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span className="hidden xs:inline">Volatility</span>
-          <span className="xs:hidden">Trend</span>
+          <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden sm:inline">Trend</span>
+          <span className="sm:hidden text-[10px]">Trend</span>
         </button>
       </div>
 
@@ -288,8 +328,11 @@ export default function BetsLedger({
         {activeTab === 'all' && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-[10px] text-[#5f616b] uppercase font-bold tracking-wider px-2 border-b border-[#212327]/10 pb-1.5 font-mono">
-              <span>User</span>
-              <div className="flex gap-14 pr-2">
+              <span className="flex items-center gap-1.5 text-purple-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                <span>Bets List ({allBetsCount})</span>
+              </span>
+              <div className="flex gap-14 pr-2 text-[#5f616b]">
                 <span>Bet Size</span>
                 <span>Payout</span>
               </div>
@@ -436,6 +479,95 @@ export default function BetsLedger({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: LIVE CHAT ROOM PANEL */}
+        {activeTab === 'chat' && (
+          <div className="flex flex-col gap-2 animate-fadeIn py-1">
+            {/* Header info */}
+            <div className="flex justify-between items-center text-[10px] text-gray-500 font-mono tracking-wide px-1 border-b border-[#212327]/10 pb-1.5 mb-1.5">
+              <span className="uppercase font-bold text-amber-500">Live JetCash Lounge Chat</span>
+              <span className="text-[#00e600] font-bold flex items-center gap-1">🟢 Live {onlineCount} online</span>
+            </div>
+
+            {/* Scrolling chat lists */}
+            <div 
+              className="space-y-1.5 max-h-[175px] h-[175px] overflow-y-auto pr-1 flex flex-col pt-1" 
+              id="ledger-chat-messages"
+            >
+              {chatMessages.length === 0 ? (
+                <div className="text-center py-12 text-[#50525b] select-none uppercase font-bold tracking-widest font-mono text-[10px]">
+                  No messages in the lounge yet
+                </div>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div 
+                    key={msg.id}
+                    className={`flex flex-col gap-0.5 max-w-[85%] px-2.5 py-1.5 rounded-xl border text-[11px] leading-snug transition-all ${
+                      msg.isMe 
+                        ? 'ml-auto bg-[#00e600]/10 border-[#00e600]/20 text-white rounded-br-none items-end' 
+                        : 'mr-auto bg-[#1b1c21] border-[#272930] text-gray-200 rounded-bl-none items-start'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1 text-[9px]">
+                      <span className={`font-extrabold ${msg.isMe ? 'text-amber-400' : 'text-purple-400'}`}>
+                        {msg.isMe ? 'You' : msg.username}
+                      </span>
+                      <span className="text-gray-600 text-[8px] font-mono">{msg.timestamp}</span>
+                    </div>
+                    <p className="font-medium text-gray-300 select-all">{msg.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Quick action preset chips */}
+            <div className="flex gap-1.5 overflow-x-auto py-1 scrollbar-none pr-1 mt-1 border-t border-[#212327]/30">
+              {['Nice win! 🎉', 'Better luck 👍', 'Wow!', 'JetCash 🚀', 'Let\'s gooo! 🙌', 'Crashed! 💥'].map((phrase, pIdx) => (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => onSendMessage && onSendMessage(phrase)}
+                  className="px-2 py-1 rounded bg-[#1f2025] hover:bg-[#282a32] text-[9.5px] font-bold border border-[#272930] hover:border-gray-500 text-gray-300 transition-colors whitespace-nowrap cursor-pointer active:scale-95 shrink-0"
+                >
+                  {phrase}
+                </button>
+              ))}
+            </div>
+
+            {/* Simple footer quick send typing panel inside Ledger */}
+            <div className="flex gap-1 border-t border-[#212327]/30 pt-1.5 mt-1">
+              <input 
+                type="text"
+                placeholder="Send a pre-defined phrase or type here..."
+                className="flex-1 bg-[#0c0d0f] border border-[#23252b] focus:border-[#00e600]/45 outline-none rounded-lg px-2 py-1 text-xs text-white placeholder:text-gray-600 font-medium font-sans"
+                id="ledger-chat-input"
+                maxLength={80}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const input = e.currentTarget;
+                    if (input.value.trim() && onSendMessage) {
+                      onSendMessage(input.value.trim());
+                      input.value = '';
+                    }
+                  }
+                }}
+              />
+              <button 
+                type="button"
+                onClick={() => {
+                  const input = document.getElementById('ledger-chat-input') as HTMLInputElement;
+                  if (input && input.value.trim() && onSendMessage) {
+                    onSendMessage(input.value.trim());
+                    input.value = '';
+                  }
+                }}
+                className="px-3 py-1 bg-[#cb002b] hover:bg-[#e60031] text-white text-[11px] font-bold font-sans rounded-lg transition-colors cursor-pointer active:scale-95 flex items-center justify-center shrink-0"
+              >
+                Send
+              </button>
             </div>
           </div>
         )}

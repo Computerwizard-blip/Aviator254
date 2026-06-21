@@ -20,6 +20,7 @@ import NotificationsCenter from './components/NotificationsCenter';
 import WelcomingIntro from './components/WelcomingIntro';
 import ProfilePanel from './components/ProfilePanel';
 import SettingsModal from './components/SettingsModal';
+import GlobalChatDrawer, { ChatMessage } from './components/GlobalChatDrawer';
 import { Lock, PhoneCall, ShieldAlert, HeartHandshake, AlertOctagon, Gamepad2, Settings, ListFilter, Bell, WifiOff } from 'lucide-react';
 import { Wallet, UserProfile, JackpotPool, Transaction, NotificationItem } from './types';
 
@@ -678,8 +679,29 @@ export default function App() {
 
   // Simulated live lobby bettors
   const [activePlayers, setActivePlayers] = useState<BetLogItem[]>([]);
-  const [onlinePlayersCount, setOnlinePlayersCount] = useState<number>(() => Math.floor(Math.random() * (2500 - 1500 + 1)) + 1500);
-  const [startingPlayers, setStartingPlayers] = useState<number>(() => Math.floor(Math.random() * (2500 - 1500 + 1)) + 1500);
+  const [siteOnlineCount, setSiteOnlineCount] = useState<number>(() => Math.floor(Math.random() * (2550 - 2250 + 1)) + 2250);
+  const siteOnlineCountRef = useRef(siteOnlineCount);
+
+  useEffect(() => {
+    siteOnlineCountRef.current = siteOnlineCount;
+  }, [siteOnlineCount]);
+
+  // Slowly and realistically fluctuate site-wide online players counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSiteOnlineCount(prev => {
+        // Subtle drift of -3 to +3 players every 4.5 seconds
+        const change = Math.floor(Math.random() * 7) - 3;
+        const nextVal = prev + change;
+        // Keep strictly bound within the 1430 to 2650 range
+        return Math.min(2650, Math.max(1430, nextVal));
+      });
+    }, 4500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const [onlinePlayersCount, setOnlinePlayersCount] = useState<number>(() => Math.floor(Math.random() * (2200 - 1950 + 1)) + 1950);
+  const [startingPlayers, setStartingPlayers] = useState<number>(() => Math.floor(Math.random() * (2200 - 1950 + 1)) + 1950);
   const [finalMinPlayers, setFinalMinPlayers] = useState<number>(85);
   const [bigWinOverlay, setBigWinOverlay] = useState<{ multiplier: number; amount: number } | null>(null);
 
@@ -719,7 +741,89 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [isDownloadAppOpen, setIsDownloadAppOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { id: 'm1', username: 'Kamau_KE', text: 'JetCash is giving crazy runs today! 🚀', timestamp: '09:12' },
+    { id: 'm2', username: 'Wanjiku_Win', text: 'Cashed out on 5.4x, lets go! 🔥💵', timestamp: '09:15' },
+    { id: 'm3', username: 'Mwangi_001', text: 'Almost hit the 15x, better luck next time!', timestamp: '09:20' },
+    { id: 'm4', username: 'Amani_254', text: 'Wow!', timestamp: '09:24' }
+  ]);
   const [switchModeTargetState, setSwitchModeTargetState] = useState<'real' | 'demo' | null>(null);
+
+  // Periodic simulated lounge chat banter
+  useEffect(() => {
+    const chatPhrases = [
+      'Nice win! 🎉',
+      'Better luck next time! 👍',
+      'Wow!',
+      'JetCash to the moon! 🚀',
+      'Let\'s gooo! 🙌',
+      'So close! 🤏',
+      'Oh no, crashed! 💥',
+      'Play safe guys! 🛡️',
+      'High risk, high reward! 💎',
+      'Wait for the big one! 🐉',
+      'Withdraw on time! ⏱️',
+      'Next round is 10x! 🔥',
+      'Got 2.5x, I\'m happy! 😎',
+      'Perfect flight!',
+      'Unbelievable multiplier! 🔥'
+    ];
+
+    const generateSimulatedMessage = () => {
+      // Pick dynamic sender from COMPANION_USERS list to keep community style
+      const idx1 = Math.floor(Math.random() * COMPANION_USERS.length);
+      const user = COMPANION_USERS[idx1];
+      const idx2 = Math.floor(Math.random() * chatPhrases.length);
+      const phrase = chatPhrases[idx2];
+      
+      const newMsg: ChatMessage = {
+        id: `sim-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        username: user,
+        text: phrase,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setChatMessages(prev => {
+        const updated = [...prev, newMsg];
+        if (updated.length > 45) {
+          return updated.slice(updated.length - 45);
+        }
+        return updated;
+      });
+    };
+
+    // Periodical chatter with high-action dynamic spacing (1.5s to 4.5s) like real Aviator apps
+    let timeoutId: any;
+    
+    const scheduleNext = () => {
+      const delay = Math.round(Math.random() * 2700 + 1500); // 1.5s to 4.2s
+      timeoutId = setTimeout(() => {
+        generateSimulatedMessage();
+        scheduleNext();
+      }, delay);
+    };
+    
+    scheduleNext();
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  const handleSendChatMessage = (text: string) => {
+    const newMsg: ChatMessage = {
+      id: `me-${Date.now()}`,
+      username: userProfile.username || 'francypendy',
+      text: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isMe: true
+    };
+    setChatMessages(prev => {
+      const updated = [...prev, newMsg];
+      if (updated.length > 45) {
+        return updated.slice(updated.length - 45);
+      }
+      return updated;
+    });
+  };
 
   const handleSignOut = () => {
     sessionStorage.removeItem('casinohub_session_authenticated');
@@ -799,8 +903,9 @@ export default function App() {
     const rand = Math.random;
     const limit = getCurrentRoundLimit(roundIndex);
     
-    // a maximum of 1500 to 2500 in starting
-    const maxStart = Math.floor(rand() * (2500 - 1500 + 1)) + 1500;
+    // To ensure users live is always more than those actively playing, 
+    // the game's round active players (maxStart) is a fraction of the total site-wide users (siteOnlineCount).
+    const maxStart = Math.min(2650, Math.max(1200, Math.floor(siteOnlineCountRef.current * (0.84 + rand() * 0.08))));
     // a minimum of 63 to 135
     const minFinal = Math.floor(rand() * (135 - 63 + 1)) + 63;
     
@@ -957,12 +1062,13 @@ export default function App() {
       const elapsed = now - phaseStartTimeRef.current;
       const limit = getCurrentRoundLimit(roundIndex);
 
-      // Slowly and realistically fluctuate overall online lobby counter
+      // Slowly and realistically fluctuate active flight round online counter while waiting in lobby
       if (typeof window !== 'undefined' && currentPhase === 'lobby' && Math.random() < 0.15) {
         setOnlinePlayersCount(prev => {
           const jitter = Math.floor(Math.random() * 5) - 2; // -2 to +2
           const nextVal = prev + jitter;
-          return Math.min(2450, Math.max(1800, nextVal));
+          const maxAllowed = Math.floor(siteOnlineCountRef.current * 0.94);
+          return Math.min(maxAllowed, Math.max(1200, nextVal));
         });
       }
 
@@ -1092,7 +1198,7 @@ export default function App() {
 
           bothBetsPlacedInRoundRef.current = false;
           setRoundIndex(prev => {
-            const nextLobbyCount = Math.floor(Math.random() * (2500 - 1500 + 1)) + 1500;
+            const nextLobbyCount = Math.min(2650, Math.max(1200, Math.floor(siteOnlineCountRef.current * (0.84 + Math.random() * 0.08))));
             setOnlinePlayersCount(nextLobbyCount);
             setStartingPlayers(nextLobbyCount);
             return prev + 1;
@@ -1614,6 +1720,15 @@ export default function App() {
               <span className="text-[11px]">👤</span>
               <span>Profile</span>
             </button>
+
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="px-2.5 py-1.5 rounded bg-amber-950/20 hover:bg-amber-900/30 text-amber-500 border border-amber-900/30 hover:border-amber-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
+              title="Open Global Lounge Chat"
+            >
+              <span className="text-[11px]">💬</span>
+              <span>Chat</span>
+            </button>
           </div>
         </div>
 
@@ -1692,6 +1807,10 @@ export default function App() {
                 multipliers={historyList}
                 roundIndex={roundIndex}
                 userProfile={userProfile}
+                chatMessages={chatMessages}
+                onSendMessage={handleSendChatMessage}
+                onlineCount={siteOnlineCount}
+                onlinePlayersCount={onlinePlayersCount}
               />
             </div>
           </>
@@ -1803,6 +1922,16 @@ export default function App() {
           muted={muted}
           onToggleMute={handleToggleMute}
           triggerNotification={triggerNotification}
+        />
+
+        {/* Global JetCash Lounge Chat Drawer */}
+        <GlobalChatDrawer 
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          userProfile={userProfile}
+          messages={chatMessages}
+          onSendMessage={handleSendChatMessage}
+          onlineCount={siteOnlineCount}
         />
 
         {/* Switch mode safety assurance overlay warning */}
