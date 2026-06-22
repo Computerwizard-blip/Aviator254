@@ -21,6 +21,9 @@ interface AviatorBetPanelProps {
   onBetCancelled?: (amount: number) => void;
   onRefill?: (amount: number) => void;
   isDemo?: boolean;
+  isNextPlaced?: boolean;
+  nextBetVal?: number;
+  placedBetAmountProp?: number;
 }
 
 export default function AviatorBetPanel({
@@ -38,19 +41,27 @@ export default function AviatorBetPanel({
   onBetCancelled,
   onRefill,
   isDemo = true,
+  isNextPlaced = false,
+  nextBetVal = 0,
+  placedBetAmountProp = 0,
 }: AviatorBetPanelProps) {
   const [activeSubTab, setActiveSubTab] = useState<'bet' | 'auto'>('bet');
   const [betAmount, setBetAmount] = useState<number>(10.00);
   const [betAmountInput, setBetAmountInput] = useState<string>("10.00");
-  const [placedBetAmount, setPlacedBetAmount] = useState<number>(0);
+  const [localPlacedBetAmount, setLocalPlacedBetAmount] = useState<number>(0);
+  const setPlacedBetAmount = setLocalPlacedBetAmount;
   const [autoCashoutEnabled, setAutoCashoutEnabled] = useState<boolean>(false);
   const [autoCashoutValue, setAutoCashoutValue] = useState<number>(2.00);
   const [autoBetEnabled, setAutoBetEnabled] = useState<boolean>(false);
-  const [isWaitingNextRound, setIsWaitingNextRound] = useState<boolean>(false);
+  const [localIsWaitingNextRound, setLocalIsWaitingNextRound] = useState<boolean>(false);
+  const setIsWaitingNextRound = setLocalIsWaitingNextRound;
   const [panelError, setPanelError] = useState<string>('');
   const [showRefillPrompt, setShowRefillPrompt] = useState<boolean>(false);
 
-  const isStakeLocked = isPlaced && !hasCashedOut && !isWaitingNextRound;
+  const isWaitingNextRound = isNextPlaced;
+  const resolvedIsPlaced = isPlaced || isNextPlaced;
+  const placedBetAmount = isNextPlaced ? nextBetVal : (placedBetAmountProp !== undefined && placedBetAmountProp > 0 ? placedBetAmountProp : localPlacedBetAmount);
+  const isStakeLocked = resolvedIsPlaced && !hasCashedOut && !isWaitingNextRound;
 
   // Quick stake buttons with custom ordered formats
   const quickStakes = [
@@ -160,7 +171,7 @@ export default function AviatorBetPanel({
 
   // Perform Bet placements
   const handlePlaceBet = () => {
-    if (isPlaced) {
+    if (resolvedIsPlaced) {
       // Cancel outstanding preflight bet or queued next-round bet
       if (countdownActive || isWaitingNextRound) {
         setIsPlaced(false);
@@ -474,7 +485,7 @@ export default function AviatorBetPanel({
         {/* Right column: Massive green button wrapper */}
         <div className="col-span-12 sm:col-span-6">
           {/* Conditional display of button layout based on round status */}
-          {!isPlaced ? (
+          {!resolvedIsPlaced ? (
             /* Standard GREEN BET trigger - matches photos */
             <button 
               type="button"

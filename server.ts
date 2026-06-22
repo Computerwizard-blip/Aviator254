@@ -425,8 +425,8 @@ async function startServer() {
             queuedForNextRound: isNextRound
           };
 
-          // Filter out stale unqueued bets from the same panel if placed
-          activePlayers = activePlayers.filter(p => !(p.socketId === socketId && p.panelId === panelId));
+          // Filter out stale bets in the same target round slot (current round vs next round queued)
+          activePlayers = activePlayers.filter(p => !(p.socketId === socketId && p.panelId === panelId && p.queuedForNextRound === isNextRound));
           activePlayers.push(newBet);
 
           broadcast({
@@ -434,8 +434,13 @@ async function startServer() {
             activePlayers
           });
         } else if (msg.type === 'CANCEL_BET') {
-          const { panelId } = msg;
-          activePlayers = activePlayers.filter(p => !(p.socketId === socketId && p.panelId === panelId && !p.cashedOut));
+          const { panelId, isNextRound } = msg;
+          activePlayers = activePlayers.filter(p => !(
+            p.socketId === socketId && 
+            p.panelId === panelId && 
+            !p.cashedOut && 
+            (isNextRound !== undefined ? (p.queuedForNextRound === isNextRound) : true)
+          ));
           broadcast({
             type: 'LOBBY_BET_UPDATE',
             activePlayers

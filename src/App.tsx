@@ -853,10 +853,14 @@ export default function App() {
   const [panel1Placed, setPanel1Placed] = useState<boolean>(false);
   const [panel1Cashed, setPanel1Cashed] = useState<boolean>(false);
   const [panel1BetVal, setPanel1BetVal] = useState<number>(0);
+  const [panel1NextPlaced, setPanel1NextPlaced] = useState<boolean>(false);
+  const [panel1NextBetVal, setPanel1NextBetVal] = useState<number>(0);
 
   const [panel2Placed, setPanel2Placed] = useState<boolean>(false);
   const [panel2Cashed, setPanel2Cashed] = useState<boolean>(false);
   const [panel2BetVal, setPanel2BetVal] = useState<number>(0);
+  const [panel2NextPlaced, setPanel2NextPlaced] = useState<boolean>(false);
+  const [panel2NextBetVal, setPanel2NextBetVal] = useState<number>(0);
 
   // Growth loop ticker references
   const mainTickerInterval = useRef<NodeJS.Timeout | null>(null);
@@ -1201,7 +1205,15 @@ export default function App() {
             panel1NextRoundBetModeRef.current = null;
             setPanel1Placed(true);
             setPanel1Cashed(false);
+            setPanel1BetVal(panel1ActiveBetRef.current);
+          } else {
+            setPanel1Placed(false);
+            setPanel1Cashed(false);
+            setPanel1BetVal(0);
           }
+          setPanel1NextPlaced(false);
+          setPanel1NextBetVal(0);
+
           if (panel2NextRoundBetRef.current !== null) {
             panel2ActiveBetRef.current = panel2NextRoundBetRef.current;
             panel2BetModeRef.current = panel2NextRoundBetModeRef.current;
@@ -1209,7 +1221,14 @@ export default function App() {
             panel2NextRoundBetModeRef.current = null;
             setPanel2Placed(true);
             setPanel2Cashed(false);
+            setPanel2BetVal(panel2ActiveBetRef.current);
+          } else {
+            setPanel2Placed(false);
+            setPanel2Cashed(false);
+            setPanel2BetVal(0);
           }
+          setPanel2NextPlaced(false);
+          setPanel2NextBetVal(0);
 
           bothBetsPlacedInRoundRef.current = false;
           setRoundIndex(prev => {
@@ -1264,24 +1283,28 @@ export default function App() {
     const activeMode = authSessionMode === 'real' ? 'real' : 'demo';
 
     if (panelId === 'panel1') {
-      setPanel1Placed(true);
-      setPanel1Cashed(false);
-      setPanel1BetVal(amount);
       if (isNextRound) {
         panel1NextRoundBetRef.current = amount;
         panel1NextRoundBetModeRef.current = activeMode;
+        setPanel1NextPlaced(true);
+        setPanel1NextBetVal(amount);
       } else {
+        setPanel1Placed(true);
+        setPanel1Cashed(false);
+        setPanel1BetVal(amount);
         panel1ActiveBetRef.current = amount;
         panel1BetModeRef.current = activeMode;
       }
     } else {
-      setPanel2Placed(true);
-      setPanel2Cashed(false);
-      setPanel2BetVal(amount);
       if (isNextRound) {
         panel2NextRoundBetRef.current = amount;
         panel2NextRoundBetModeRef.current = activeMode;
+        setPanel2NextPlaced(true);
+        setPanel2NextBetVal(amount);
       } else {
+        setPanel2Placed(true);
+        setPanel2Cashed(false);
+        setPanel2BetVal(amount);
         panel2ActiveBetRef.current = amount;
         panel2BetModeRef.current = activeMode;
       }
@@ -1303,24 +1326,40 @@ export default function App() {
     // Refund the balance!
     balanceRef.current = parseFloat((balanceRef.current + amount).toFixed(2));
     setBalance(prev => parseFloat((prev + amount).toFixed(2)));
+
+    const isNextRound = currentPhase === 'flight' || currentPhase === 'crashed';
+
     if (panelId === 'panel1') {
-      setPanel1BetVal(0);
-      panel1ActiveBetRef.current = null;
-      panel1NextRoundBetRef.current = null;
-      panel1BetModeRef.current = null;
-      panel1NextRoundBetModeRef.current = null;
+      if (isNextRound) {
+        setPanel1NextBetVal(0);
+        setPanel1NextPlaced(false);
+        panel1NextRoundBetRef.current = null;
+        panel1NextRoundBetModeRef.current = null;
+      } else {
+        setPanel1BetVal(0);
+        setPanel1Placed(false);
+        panel1ActiveBetRef.current = null;
+        panel1BetModeRef.current = null;
+      }
     } else {
-      setPanel2BetVal(0);
-      panel2ActiveBetRef.current = null;
-      panel2NextRoundBetRef.current = null;
-      panel2BetModeRef.current = null;
-      panel2NextRoundBetModeRef.current = null;
+      if (isNextRound) {
+        setPanel2NextBetVal(0);
+        setPanel2NextPlaced(false);
+        panel2NextRoundBetRef.current = null;
+        panel2NextRoundBetModeRef.current = null;
+      } else {
+        setPanel2BetVal(0);
+        setPanel2Placed(false);
+        panel2ActiveBetRef.current = null;
+        panel2BetModeRef.current = null;
+      }
     }
 
     if (socketConnected && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({
         type: 'CANCEL_BET',
-        panelId
+        panelId,
+        isNextRound
       }));
     }
   };
@@ -1442,10 +1481,15 @@ export default function App() {
                 panel1NextRoundBetModeRef.current = null;
                 setPanel1Placed(true);
                 setPanel1Cashed(false);
+                setPanel1BetVal(panel1ActiveBetRef.current);
               } else {
                 setPanel1Placed(false);
                 setPanel1Cashed(false);
+                setPanel1BetVal(0);
               }
+              setPanel1NextPlaced(false);
+              setPanel1NextBetVal(0);
+
               if (panel2NextRoundBetRef.current !== null) {
                 panel2ActiveBetRef.current = panel2NextRoundBetRef.current;
                 panel2BetModeRef.current = panel2NextRoundBetModeRef.current;
@@ -1453,10 +1497,14 @@ export default function App() {
                 panel2NextRoundBetModeRef.current = null;
                 setPanel2Placed(true);
                 setPanel2Cashed(false);
+                setPanel2BetVal(panel2ActiveBetRef.current);
               } else {
                 setPanel2Placed(false);
                 setPanel2Cashed(false);
+                setPanel2BetVal(0);
               }
+              setPanel2NextPlaced(false);
+              setPanel2NextBetVal(0);
               bothBetsPlacedInRoundRef.current = false;
             } else if (nextPhase === 'flight') {
               setCrashActive(true);
@@ -1971,7 +2019,7 @@ export default function App() {
               />
 
               {/* MIDDLE FLIGHT VIEWPORT CONTAINER */}
-              <div className="p-2 sm:p-3 bg-[#0d0e10] flex-1 min-h-[170px] md:min-h-0 flex flex-col justify-center">
+              <div className="p-2 sm:p-3 bg-[#0d0e10] flex-1 min-h-[250px] md:min-h-0 flex flex-col justify-center">
                 <AviatorGameViewport 
                   crashActive={crashActive}
                   crashMultiplier={crashMultiplier}
@@ -2008,6 +2056,9 @@ export default function App() {
                   onBetCancelled={(amt) => handleBetCancelled('panel1', amt)}
                   onRefill={handleRefill}
                   isDemo={authSessionMode === 'demo'}
+                  isNextPlaced={panel1NextPlaced}
+                  nextBetVal={panel1NextBetVal}
+                  placedBetAmountProp={panel1BetVal}
                 />
 
                 <AviatorBetPanel 
@@ -2025,6 +2076,9 @@ export default function App() {
                   onBetCancelled={(amt) => handleBetCancelled('panel2', amt)}
                   onRefill={handleRefill}
                   isDemo={authSessionMode === 'demo'}
+                  isNextPlaced={panel2NextPlaced}
+                  nextBetVal={panel2NextBetVal}
+                  placedBetAmountProp={panel2BetVal}
                 />
               </div>
             </div>
