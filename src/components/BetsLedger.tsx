@@ -38,6 +38,7 @@ interface BetsLedgerProps {
   onSendMessage?: (text: string) => void;
   onlineCount?: number;
   onlinePlayersCount?: number;
+  className?: string;
 }
 
 const USERS_LIST = [
@@ -123,7 +124,8 @@ export default function BetsLedger({
   chatMessages = [],
   onSendMessage,
   onlineCount = 12,
-  onlinePlayersCount = 1750
+  onlinePlayersCount = 1750,
+  className
 }: BetsLedgerProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'my' | 'top' | 'chat' | 'chart'>('all');
   const [topRoundMultiplier, setTopRoundMultiplier] = useState<number>(312.42);
@@ -265,7 +267,7 @@ export default function BetsLedger({
   const allBetsCount = onlinePlayersCount;
 
   return (
-    <div className="bg-[#141518] rounded-2xl border border-[#212327] overflow-hidden select-none font-sans shrink-0">
+    <div className={`bg-[#141518] rounded-2xl border border-[#212327] overflow-hidden select-none font-sans flex flex-col ${className || 'shrink-0'}`}>
       {/* 1. Statistics Tabs Selectors Bar */}
       <div className="flex bg-[#0d0e10] p-1 border-b border-[#212327] gap-0.5">
         <button 
@@ -323,10 +325,10 @@ export default function BetsLedger({
       </div>
 
       {/* 2. Main content panels list */}
-      <div className="p-3">
+      <div className="p-3 flex-1 min-h-0 flex flex-col">
         {/* TAB 1: ALL ACTIVE MULTIPLAYER BETS BOARD */}
         {activeTab === 'all' && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center justify-between text-[10px] text-[#5f616b] uppercase font-bold tracking-wider px-2 border-b border-[#212327]/10 pb-1.5 font-mono">
               <span className="flex items-center gap-1.5 text-purple-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
@@ -338,7 +340,7 @@ export default function BetsLedger({
               </div>
             </div>
 
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[200px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
               {activePlayers.map((player) => {
                 const livePayout = player.cashedOut 
                   ? player.payoutAmount 
@@ -400,7 +402,7 @@ export default function BetsLedger({
 
         {/* TAB 2: MY PAST PERSONAL BETS HISTORICAL LEDGER */}
         {activeTab === 'my' && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center justify-between text-[10px] text-[#5f616b] uppercase font-bold tracking-wider px-2 border-b border-[#212327]/10 pb-1.5 font-mono">
               <span>Time</span>
               <span>Bet</span>
@@ -410,7 +412,7 @@ export default function BetsLedger({
               </div>
             </div>
 
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[220px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
               {myBets.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[#50525b] select-none uppercase font-bold tracking-widest">
                   No registered bets yet KSh
@@ -448,7 +450,7 @@ export default function BetsLedger({
 
         {/* TAB 3: TOP GLOBAL LEADERBOARD OF THE WEEK */}
         {activeTab === 'top' && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center justify-between text-[11px] text-[#5f616b] font-bold tracking-wide px-2 border-b border-[#212327]/10 pb-1.5 font-mono">
               <span>LEADER NAME</span>
               <div className="flex gap-14 pr-2">
@@ -457,7 +459,7 @@ export default function BetsLedger({
               </div>
             </div>
 
-            <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[220px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
               {topBets.map((item, idx) => (
                 <div 
                   key={idx}
@@ -485,7 +487,7 @@ export default function BetsLedger({
 
         {/* TAB 4: LIVE CHAT ROOM PANEL */}
         {activeTab === 'chat' && (
-          <div className="flex flex-col gap-2 animate-fadeIn py-1">
+          <div className="flex flex-col gap-2 animate-fadeIn py-1 flex-1 min-h-0">
             {/* Header info */}
             <div className="flex justify-between items-center text-[10px] text-gray-500 font-mono tracking-wide px-1 border-b border-[#212327]/10 pb-1.5 mb-1.5">
               <span className="uppercase font-bold text-amber-500">Live JetCash Lounge Chat</span>
@@ -494,7 +496,7 @@ export default function BetsLedger({
 
             {/* Scrolling chat lists */}
             <div 
-              className="space-y-1.5 max-h-[175px] h-[175px] overflow-y-auto pr-1 flex flex-col pt-1" 
+              className="space-y-1.5 max-h-[175px] lg:max-h-none lg:h-auto lg:flex-1 overflow-y-auto pr-1 flex flex-col pt-1" 
               id="ledger-chat-messages"
             >
               {chatMessages.length === 0 ? (
@@ -574,13 +576,13 @@ export default function BetsLedger({
 
         {/* TAB 4: RECHARTS VOLATILITY TREND LINE CHART */}
         {activeTab === 'chart' && (
-          <div className="flex flex-col gap-3 animate-fadeIn">
+          <div className="flex flex-col gap-3 animate-fadeIn flex-1 min-h-0">
             <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono tracking-wide px-1">
               <span className="uppercase font-bold text-red-500">Live Crash Volatility Index</span>
               <span>Recent {multipliers?.length || 0} Flights</span>
             </div>
 
-            <div className="w-full h-[180px] bg-black/50 rounded-xl border border-red-500/10 p-2.5 relative">
+            <div className="w-full h-[180px] lg:h-auto lg:flex-1 bg-black/50 rounded-xl border border-red-500/10 p-2.5 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={(multipliers || []).map((mult, index) => ({

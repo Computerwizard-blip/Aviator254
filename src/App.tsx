@@ -1626,7 +1626,7 @@ export default function App() {
     <div className="h-screen w-screen bg-[#0d0e10] text-gray-100 flex flex-col justify-start items-stretch p-0 relative antialiased overflow-hidden">
       
       {/* Central Screen Frame */}
-      <div className="w-full h-full bg-[#0d0e10] overflow-y-auto flex flex-col shadow-none shrink-0">
+      <div className={`w-full h-full bg-[#0d0e10] flex flex-col shadow-none shrink-0 ${currentView === 'aviator' ? 'overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto'}`}>
         
         {/* STICKY TOP DASHBOARD WRAPPER: Matches Mobile & Laptop Full-Page layout */}
         <div className="sticky top-0 z-40 bg-[#141518] flex flex-col shrink-0 border-b border-[#212327]/50 shadow-md">
@@ -1736,72 +1736,9 @@ export default function App() {
         </div>
 
         {currentView === 'aviator' && (
-          <>
-            {/* RECENT HISTORIC MULTIPLIERS STRIP */}
-            <HistoryRibbon 
-              multipliers={historyList}
-            />
-
-            {/* MIDDLE FLIGHT VIEWPORT CONTAINER */}
-            <div className="p-3 bg-[#0d0e10] flex flex-col">
-              <AviatorGameViewport 
-                crashActive={crashActive}
-                crashMultiplier={crashMultiplier}
-                crashStatusMessage={crashStatusMessage}
-                countdownValue={countdownValue}
-                onlinePlayersCount={onlinePlayersCount}
-                avatarList={(() => {
-                  const alive = activePlayers.filter(p => !p.cashedOut);
-                  const pool = alive.length >= 3 ? alive : activePlayers;
-                  const mapped = pool.slice(0, 3).map(p => {
-                    const clean = p.username.replace(/[^a-zA-Z]/g, '').toUpperCase();
-                    return clean.substring(0, 2) || 'KM';
-                  });
-                  return mapped.length >= 3 ? mapped : ['KM', 'AM', 'NJ'];
-                })()}
-                authSessionMode={authSessionMode}
-              />
-            </div>
-
-            {/* BOTTOM ACTIVE BET CONTROL CONSOLES - Side-by-side on all screens */}
-            <div className="grid grid-cols-2 gap-1.5 xs:gap-2 sm:gap-3 px-1.5 xs:px-2 sm:px-3 pb-2 sm:pb-3 bg-[#0d0e10]">
-              <AviatorBetPanel 
-                panelId="panel1"
-                balance={balance}
-                crashActive={crashActive}
-                crashMultiplier={crashMultiplier}
-                countdownActive={countdownValue !== null}
-                isPlaced={panel1Placed}
-                setIsPlaced={setPanel1Placed}
-                hasCashedOut={panel1Cashed}
-                setHasCashedOut={setPanel1Cashed}
-                onBetPlaced={(amt) => handleBetPlaced('panel1', amt)}
-                onCashOut={(mult, payout) => handleCashOut('panel1', mult, payout)}
-                onBetCancelled={(amt) => handleBetCancelled('panel1', amt)}
-                onRefill={handleRefill}
-                isDemo={authSessionMode === 'demo'}
-              />
-
-              <AviatorBetPanel 
-                panelId="panel2"
-                balance={balance}
-                crashActive={crashActive}
-                crashMultiplier={crashMultiplier}
-                countdownActive={countdownValue !== null}
-                isPlaced={panel2Placed}
-                setIsPlaced={setPanel2Placed}
-                hasCashedOut={panel2Cashed}
-                setHasCashedOut={setPanel2Cashed}
-                onBetPlaced={(amt) => handleBetPlaced('panel2', amt)}
-                onCashOut={(mult, payout) => handleCashOut('panel2', mult, payout)}
-                onBetCancelled={(amt) => handleBetCancelled('panel2', amt)}
-                onRefill={handleRefill}
-                isDemo={authSessionMode === 'demo'}
-              />
-            </div>
-
-            {/* MULTIPLAYER LOBBY STATISTICS AND PERSISTENT LEDGER BOARDS */}
-            <div className="flex-1 bg-[#0d0e10] p-3 pt-0 flex flex-col justify-end">
+          <div className="flex-1 flex flex-col lg:flex-row min-h-0 lg:overflow-hidden bg-[#0d0e10]">
+            {/* LEFT SIDEBAR: Multiplayer lobby statistics & lounge chats */}
+            <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0 border-r border-[#212327]/30 bg-[#0d0e10] flex flex-col overflow-y-auto lg:overflow-hidden order-2 lg:order-1 h-auto lg:h-full lg:p-3 pb-3 lg:pb-3">
               <BetsLedger 
                 myBets={myBets.filter(bet => (bet.mode || 'demo') === (authSessionMode === 'real' ? 'real' : 'demo'))}
                 activePlayers={activePlayers}
@@ -1814,9 +1751,76 @@ export default function App() {
                 onSendMessage={handleSendChatMessage}
                 onlineCount={siteOnlineCount}
                 onlinePlayersCount={onlinePlayersCount}
+                className="h-full"
               />
             </div>
-          </>
+
+            {/* RIGHT MAIN STATION: Multiplier Ribbon, cockpit canvas and twin-bet consoles */}
+            <div className="flex-1 flex flex-col order-1 lg:order-2 h-auto lg:h-full lg:overflow-hidden bg-[#0d0e10]">
+              {/* RECENT HISTORIC MULTIPLIERS STRIP */}
+              <HistoryRibbon 
+                multipliers={historyList}
+              />
+
+              {/* MIDDLE FLIGHT VIEWPORT CONTAINER */}
+              <div className="p-2 sm:p-3 bg-[#0d0e10] flex-1 min-h-[200px] lg:min-h-0 flex flex-col justify-center">
+                <AviatorGameViewport 
+                  crashActive={crashActive}
+                  crashMultiplier={crashMultiplier}
+                  crashStatusMessage={crashStatusMessage}
+                  countdownValue={countdownValue}
+                  onlinePlayersCount={onlinePlayersCount}
+                  avatarList={(() => {
+                    const alive = activePlayers.filter(p => !p.cashedOut);
+                    const pool = alive.length >= 3 ? alive : activePlayers;
+                    const mapped = pool.slice(0, 3).map(p => {
+                      const clean = p.username.replace(/[^a-zA-Z]/g, '').toUpperCase();
+                      return clean.substring(0, 2) || 'KM';
+                    });
+                    return mapped.length >= 3 ? mapped : ['KM', 'AM', 'NJ'];
+                  })()}
+                  authSessionMode={authSessionMode}
+                />
+              </div>
+
+              {/* BOTTOM ACTIVE BET CONTROL CONSOLES - Side-by-side on all screens */}
+              <div className="grid grid-cols-2 gap-1.5 xs:gap-2 sm:gap-3 px-1.5 xs:px-2 sm:px-3 pb-2 sm:pb-3 bg-[#0d0e10] shrink-0">
+                <AviatorBetPanel 
+                  panelId="panel1"
+                  balance={balance}
+                  crashActive={crashActive}
+                  crashMultiplier={crashMultiplier}
+                  countdownActive={countdownValue !== null}
+                  isPlaced={panel1Placed}
+                  setIsPlaced={setPanel1Placed}
+                  hasCashedOut={panel1Cashed}
+                  setHasCashedOut={setPanel1Cashed}
+                  onBetPlaced={(amt) => handleBetPlaced('panel1', amt)}
+                  onCashOut={(mult, payout) => handleCashOut('panel1', mult, payout)}
+                  onBetCancelled={(amt) => handleBetCancelled('panel1', amt)}
+                  onRefill={handleRefill}
+                  isDemo={authSessionMode === 'demo'}
+                />
+
+                <AviatorBetPanel 
+                  panelId="panel2"
+                  balance={balance}
+                  crashActive={crashActive}
+                  crashMultiplier={crashMultiplier}
+                  countdownActive={countdownValue !== null}
+                  isPlaced={panel2Placed}
+                  setIsPlaced={setPanel2Placed}
+                  hasCashedOut={panel2Cashed}
+                  setHasCashedOut={setPanel2Cashed}
+                  onBetPlaced={(amt) => handleBetPlaced('panel2', amt)}
+                  onCashOut={(mult, payout) => handleCashOut('panel2', mult, payout)}
+                  onBetCancelled={(amt) => handleBetCancelled('panel2', amt)}
+                  onRefill={handleRefill}
+                  isDemo={authSessionMode === 'demo'}
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {currentView === 'lobby' && (

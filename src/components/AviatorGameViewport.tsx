@@ -365,7 +365,7 @@ export default function AviatorGameViewport({
   return (
     <div 
       ref={containerRef}
-      className="md:rounded-2xl rounded-xl relative shadow-inner select-none overflow-hidden h-[150px] xs:h-[180px] sm:h-[220px] md:h-[260px] lg:h-[300px] w-full border border-red-500/10 flex flex-col justify-center items-center"
+      className="md:rounded-2xl rounded-xl relative shadow-inner select-none overflow-hidden h-[150px] xs:h-[180px] sm:h-[210px] md:h-[240px] lg:h-full lg:flex-1 w-full border border-red-500/10 flex flex-col justify-center items-center"
     >
       {/* 1. Underlying Render Canvas (Smooth 60FPS drawing grids and red flights) */}
       <canvas 
