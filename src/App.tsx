@@ -591,6 +591,9 @@ export default function App() {
   const [countdownValue, setCountdownValue] = useState<number | null>(5.0);
   const [roundCrashLimit, setRoundCrashLimit] = useState<number>(2.50);
 
+  const [socketConnected, setSocketConnected] = useState<boolean>(false);
+  const socketRef = useRef<WebSocket | null>(null);
+
   // Recent multiplier outcomes matching the list pictured in user screenshots
   const [historyList, setHistoryList] = useState<number[]>([
     1.29, 2.08, 1.73, 1.75, 1.43, 2.17, 3.20, 1.05, 4.88, 1.11, 2.76, 1.94, 1.35
@@ -809,20 +812,29 @@ export default function App() {
   }, []);
 
   const handleSendChatMessage = (text: string) => {
-    const newMsg: ChatMessage = {
-      id: `me-${Date.now()}`,
-      username: userProfile.username || 'francypendy',
-      text: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMe: true
-    };
-    setChatMessages(prev => {
-      const updated = [...prev, newMsg];
-      if (updated.length > 45) {
-        return updated.slice(updated.length - 45);
-      }
-      return updated;
-    });
+    if (socketConnected && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'CHAT_MESSAGE',
+        sender: userProfile.username || 'francypendy',
+        text: text,
+        vipLevel: userProfile.vipLevel || 'Bronze'
+      }));
+    } else {
+      const newMsg: ChatMessage = {
+        id: `me-${Date.now()}`,
+        username: userProfile.username || 'francypendy',
+        text: text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isMe: true
+      };
+      setChatMessages(prev => {
+        const updated = [...prev, newMsg];
+        if (updated.length > 45) {
+          return updated.slice(updated.length - 45);
+        }
+        return updated;
+      });
+    }
   };
 
   const handleSignOut = () => {
@@ -1058,6 +1070,9 @@ export default function App() {
 
   useEffect(() => {
     const handleGameLoopTick = () => {
+      if (socketConnected) {
+        return;
+      }
       const now = Date.now();
       const elapsed = now - phaseStartTimeRef.current;
       const limit = getCurrentRoundLimit(roundIndex);
@@ -1271,6 +1286,16 @@ export default function App() {
         panel2BetModeRef.current = activeMode;
       }
     }
+
+    if (socketConnected && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'PLACE_BET',
+        username: userProfile.username || 'francypendy',
+        amount,
+        panelId,
+        mode: activeMode
+      }));
+    }
     return true;
   };
 
@@ -1290,6 +1315,13 @@ export default function App() {
       panel2NextRoundBetRef.current = null;
       panel2BetModeRef.current = null;
       panel2NextRoundBetModeRef.current = null;
+    }
+
+    if (socketConnected && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'CANCEL_BET',
+        panelId
+      }));
     }
   };
 
@@ -1339,7 +1371,183 @@ export default function App() {
     if (finalMult >= 5.0 && !bothBetsPlacedInRoundRef.current) {
       setBigWinOverlay({ multiplier: finalMult, amount: cashPayout });
     }
+
+    if (socketConnected && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'CASH_OUT',
+        panelId,
+        multiplier: finalMult
+      }));
+    }
   };
+
+  // WebSocket Connection & Synchronization Hook
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+    let ws: WebSocket;
+
+    function connect() {
+      console.log("[WS Client] Connecting to:", wsUrl);
+      ws = new WebSocket(wsUrl);
+      socketRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("[WS Client] Connected to real-time synchronized game host");
+        setSocketConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          
+          if (msg.type === 'INITIAL_STATE') {
+            setRoundIndex(msg.roundIndex);
+            setCurrentPhase(msg.currentPhase);
+            setCountdownValue(msg.currentPhase === 'lobby' ? parseFloat(((6000 - (Date.now() - msg.phaseStartTime)) / 1000).toFixed(1)) : null);
+            setCrashActive(msg.currentPhase === 'flight');
+            setCrashMultiplier(msg.currentPhase === 'flight' ? msg.currentMultiplier : 1.00);
+            setRoundCrashLimit(msg.limit);
+            setHistoryList(msg.historyList || []);
+            setActivePlayers(msg.activePlayers || []);
+            setSiteOnlineCount(msg.siteOnlineCount);
+            setOnlinePlayersCount(msg.onlinePlayersCount);
+          } else if (msg.type === 'LOBBY_TICK') {
+            setCountdownValue(msg.countdownValue);
+            setOnlinePlayersCount(msg.onlinePlayersCount);
+            setSiteOnlineCount(msg.siteOnlineCount);
+            setCrashActive(false);
+            setCrashMultiplier(1.00);
+            setCrashStatusMessage("Waiting for Round...");
+          } else if (msg.type === 'MULTIPLIER_TICK') {
+            setCrashMultiplier(msg.multiplier);
+            setOnlinePlayersCount(msg.onlinePlayersCount);
+            setActivePlayers(msg.activePlayers || []);
+          } else if (msg.type === 'PHASE_CHANGE') {
+            const nextPhase = msg.phase;
+            setCurrentPhase(nextPhase);
+
+            if (nextPhase === 'lobby') {
+              setRoundIndex(msg.roundIndex);
+              setCountdownValue(6.0);
+              setCrashActive(false);
+              setCrashMultiplier(1.00);
+              setCrashStatusMessage("Lobby Loaded");
+              setActivePlayers(msg.activePlayers || []);
+              
+              if (panel1NextRoundBetRef.current !== null) {
+                panel1ActiveBetRef.current = panel1NextRoundBetRef.current;
+                panel1BetModeRef.current = panel1NextRoundBetModeRef.current;
+                panel1NextRoundBetRef.current = null;
+                panel1NextRoundBetModeRef.current = null;
+                setPanel1Placed(true);
+                setPanel1Cashed(false);
+              } else {
+                setPanel1Placed(false);
+                setPanel1Cashed(false);
+              }
+              if (panel2NextRoundBetRef.current !== null) {
+                panel2ActiveBetRef.current = panel2NextRoundBetRef.current;
+                panel2BetModeRef.current = panel2NextRoundBetModeRef.current;
+                panel2NextRoundBetRef.current = null;
+                panel2NextRoundBetModeRef.current = null;
+                setPanel2Placed(true);
+                setPanel2Cashed(false);
+              } else {
+                setPanel2Placed(false);
+                setPanel2Cashed(false);
+              }
+              bothBetsPlacedInRoundRef.current = false;
+            } else if (nextPhase === 'flight') {
+              setCrashActive(true);
+              setCountdownValue(null);
+              setRoundCrashLimit(msg.limit);
+              setActivePlayers(msg.activePlayers || []);
+              
+              if (currentView === 'aviator') {
+                audioEngine.playFlightStart();
+              }
+            } else if (nextPhase === 'crashed') {
+              if (currentView === 'aviator') {
+                audioEngine.playCrash();
+              } else {
+                audioEngine.stopFlightSound();
+              }
+              setCrashActive(false);
+              setCountdownValue(null);
+              setCrashMultiplier(msg.limit);
+              setCrashStatusMessage(`FLEW AWAY! at ${msg.limit.toFixed(2)}x`);
+              setHistoryList(msg.historyList || []);
+
+              const lost1 = panel1ActiveBetRef.current;
+              if (lost1 !== null) {
+                const mode = panel1BetModeRef.current || (authSessionMode === 'real' ? 'real' : 'demo');
+                setMyBetsState(prev => [{
+                  amount: lost1,
+                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  status: 'LOST',
+                  mode,
+                  timestamp: Date.now()
+                }, ...prev]);
+                panel1ActiveBetRef.current = null;
+                panel1BetModeRef.current = null;
+                setPanel1Placed(false);
+              }
+              const lost2 = panel2ActiveBetRef.current;
+              if (lost2 !== null) {
+                const mode = panel2BetModeRef.current || (authSessionMode === 'real' ? 'real' : 'demo');
+                setMyBetsState(prev => [{
+                  amount: lost2,
+                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  status: 'LOST',
+                  mode,
+                  timestamp: Date.now()
+                }, ...prev]);
+                panel2ActiveBetRef.current = null;
+                panel2BetModeRef.current = null;
+                setPanel2Placed(false);
+              }
+            }
+          } else if (msg.type === 'LOBBY_BET_UPDATE') {
+            setActivePlayers(msg.activePlayers || []);
+          } else if (msg.type === 'PLAYER_CASHED_OUT') {
+            setActivePlayers(msg.activePlayers || []);
+          } else if (msg.type === 'AUTO_CASHOUT_SUCCESS') {
+            const { multiplier, payoutAmount, panelId } = msg;
+            handleCashOut(panelId, multiplier, payoutAmount);
+          } else if (msg.type === 'CHAT_BROADCAST') {
+            const receivedMsg = msg.message;
+            setChatMessages(prev => {
+              if (prev.some(m => m.id === receivedMsg.id)) return prev;
+              const updated = [...prev, receivedMsg];
+              return updated.slice(-45);
+            });
+          }
+        } catch (e) {
+          console.error("[WS Message Handling Error]:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        console.warn("[WS Client] Disconnected, falling back to local simulator");
+        setSocketConnected(false);
+        setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (e) => {
+        console.error("[WS Client] Error:", e);
+        ws.close();
+      };
+    }
+
+    connect();
+
+    return () => {
+      if (ws) {
+        ws.close();
+      }
+    };
+  }, [currentView, authSessionMode, userProfile.username]);
 
   // Mpesa cashier cashier deposit
   const handleDepositSuccess = (cashAmount: number) => {
@@ -1626,7 +1834,7 @@ export default function App() {
     <div className="h-screen w-screen bg-[#0d0e10] text-gray-100 flex flex-col justify-start items-stretch p-0 relative antialiased overflow-hidden">
       
       {/* Central Screen Frame */}
-      <div className={`w-full h-full bg-[#0d0e10] flex flex-col shadow-none shrink-0 ${currentView === 'aviator' ? 'overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto'}`}>
+      <div className={`w-full h-full bg-[#0d0e10] flex flex-col shadow-none shrink-0 ${currentView === 'aviator' ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'}`}>
         
         {/* STICKY TOP DASHBOARD WRAPPER: Matches Mobile & Laptop Full-Page layout */}
         <div className="sticky top-0 z-40 bg-[#141518] flex flex-col shrink-0 border-b border-[#212327]/50 shadow-md">
@@ -1736,9 +1944,9 @@ export default function App() {
         </div>
 
         {currentView === 'aviator' && (
-          <div className="flex-1 flex flex-col lg:flex-row min-h-0 lg:overflow-hidden bg-[#0d0e10]">
+          <div className="flex-1 flex flex-col md:flex-row min-h-0 md:overflow-hidden bg-[#0d0e10]">
             {/* LEFT SIDEBAR: Multiplayer lobby statistics & lounge chats */}
-            <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0 border-r border-[#212327]/30 bg-[#0d0e10] flex flex-col overflow-y-auto lg:overflow-hidden order-2 lg:order-1 h-auto lg:h-full lg:p-3 pb-3 lg:pb-3">
+            <div className="w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 border-r border-[#212327]/30 bg-[#0d0e10] flex flex-col overflow-y-auto md:overflow-hidden order-2 md:order-1 h-auto md:h-full md:p-3 pb-3 md:pb-3">
               <BetsLedger 
                 myBets={myBets.filter(bet => (bet.mode || 'demo') === (authSessionMode === 'real' ? 'real' : 'demo'))}
                 activePlayers={activePlayers}
@@ -1756,14 +1964,14 @@ export default function App() {
             </div>
 
             {/* RIGHT MAIN STATION: Multiplier Ribbon, cockpit canvas and twin-bet consoles */}
-            <div className="flex-1 flex flex-col order-1 lg:order-2 h-auto lg:h-full lg:overflow-hidden bg-[#0d0e10]">
+            <div className="flex-1 flex flex-col order-1 md:order-2 h-auto md:h-full md:overflow-hidden bg-[#0d0e10]">
               {/* RECENT HISTORIC MULTIPLIERS STRIP */}
               <HistoryRibbon 
                 multipliers={historyList}
               />
 
               {/* MIDDLE FLIGHT VIEWPORT CONTAINER */}
-              <div className="p-2 sm:p-3 bg-[#0d0e10] flex-1 min-h-[200px] lg:min-h-0 flex flex-col justify-center">
+              <div className="p-2 sm:p-3 bg-[#0d0e10] flex-1 min-h-[170px] md:min-h-0 flex flex-col justify-center">
                 <AviatorGameViewport 
                   crashActive={crashActive}
                   crashMultiplier={crashMultiplier}

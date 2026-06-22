@@ -340,7 +340,7 @@ export default function BetsLedger({
               </div>
             </div>
 
-            <div className="space-y-1.5 max-h-[200px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[180px] md:max-h-none md:flex-1 overflow-y-auto pr-1">
               {activePlayers.map((player) => {
                 const livePayout = player.cashedOut 
                   ? player.payoutAmount 
@@ -412,7 +412,7 @@ export default function BetsLedger({
               </div>
             </div>
 
-            <div className="space-y-1.5 max-h-[220px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[180px] md:max-h-none md:flex-1 overflow-y-auto pr-1">
               {myBets.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[#50525b] select-none uppercase font-bold tracking-widest">
                   No registered bets yet KSh
@@ -459,7 +459,7 @@ export default function BetsLedger({
               </div>
             </div>
 
-            <div className="space-y-1.5 max-h-[220px] lg:max-h-none lg:flex-1 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[180px] md:max-h-none md:flex-1 overflow-y-auto pr-1">
               {topBets.map((item, idx) => (
                 <div 
                   key={idx}
@@ -496,7 +496,7 @@ export default function BetsLedger({
 
             {/* Scrolling chat lists */}
             <div 
-              className="space-y-1.5 max-h-[175px] lg:max-h-none lg:h-auto lg:flex-1 overflow-y-auto pr-1 flex flex-col pt-1" 
+              className="space-y-1.5 max-h-[150px] md:max-h-none md:h-auto md:flex-1 overflow-y-auto pr-1 flex flex-col pt-1" 
               id="ledger-chat-messages"
             >
               {chatMessages.length === 0 ? (
@@ -582,7 +582,7 @@ export default function BetsLedger({
               <span>Recent {multipliers?.length || 0} Flights</span>
             </div>
 
-            <div className="w-full h-[180px] lg:h-auto lg:flex-1 bg-black/50 rounded-xl border border-red-500/10 p-2.5 relative">
+            <div className="w-full h-[150px] md:h-auto md:flex-1 bg-black/50 rounded-xl border border-red-500/10 p-2.5 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={(multipliers || []).map((mult, index) => ({

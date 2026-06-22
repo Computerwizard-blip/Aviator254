@@ -271,7 +271,7 @@ export default function AviatorBetPanel({
   }, [crashActive, countdownActive, isWaitingNextRound, autoBetEnabled]);
 
   return (
-    <div className="bg-[#141518] p-1.5 xs:p-2 md:p-3 rounded-xl md:rounded-2xl border border-[#212327] flex flex-col gap-1.5 xs:gap-2 md:gap-2.5 overflow-hidden select-none shadow-md">
+    <div className="bg-[#141518] p-1.5 xs:p-2 md:p-2.5 lg:p-3 rounded-xl md:rounded-2xl border border-[#212327] flex flex-col gap-1 xs:gap-1.5 md:gap-2 lg:gap-2.5 overflow-hidden select-none shadow-md">
       {/* 1. Header Tabs Row - Bet & Auto */}
       <div className="flex justify-between items-center select-none pb-0.5 border-b border-[#212327]/10">
         <div className="flex bg-[#0e0f11] p-0.5 rounded-full border border-[#23252b]">
@@ -479,10 +479,10 @@ export default function AviatorBetPanel({
             <button 
               type="button"
               onClick={handlePlaceBet}
-              className="w-full h-[46px] sm:h-[58px] rounded-xl sm:rounded-2xl bg-[#2cb400] hover:bg-[#34d100] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_15px_rgba(44,180,0,0.3)] border-b-2 border-[#1f8700] text-center flex flex-col justify-center items-center select-none"
+              className="w-full h-[44px] md:h-[50px] lg:h-[54px] rounded-xl bg-[#2cb400] hover:bg-[#34d100] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_15px_rgba(44,180,0,0.3)] border-b-2 border-[#1f8700] text-center flex flex-col justify-center items-center select-none"
             >
-              <span className="text-white text-sm sm:text-md tracking-widest font-black uppercase leading-tight select-none">Bet</span>
-              <span className="text-white text-[10px] sm:text-xs font-mono font-bold tracking-tight select-none">
+              <span className="text-white text-sm tracking-widest font-black uppercase leading-tight select-none">Bet</span>
+              <span className="text-white text-[10px] font-mono font-bold tracking-tight select-none">
                 {betAmount.toFixed(2)} KSh
               </span>
             </button>
@@ -493,10 +493,10 @@ export default function AviatorBetPanel({
               <button 
                 type="button"
                 onClick={handlePlaceBet}
-                className="w-full h-[46px] sm:h-[58px] rounded-xl sm:rounded-2xl bg-[#cb002b] hover:bg-[#e60031] active:scale-95 transition-all cursor-pointer shadow-[0_4px_12px_rgba(203,0,43,0.3)] border-b-2 border-[#94001f] text-center flex flex-col justify-center items-center"
+                className="w-full h-[44px] md:h-[50px] lg:h-[54px] rounded-xl bg-[#cb002b] hover:bg-[#e60031] active:scale-95 transition-all cursor-pointer shadow-[0_4px_12px_rgba(203,0,43,0.3)] border-b-2 border-[#94001f] text-center flex flex-col justify-center items-center"
               >
-                <span className="text-white text-xs sm:text-sm font-black tracking-widest uppercase leading-tight">CANCEL</span>
-                <span className="text-white text-[8px] sm:text-[10px] uppercase font-mono font-bold opacity-80">
+                <span className="text-white text-xs font-black tracking-widest uppercase leading-tight">CANCEL</span>
+                <span className="text-white text-[8px] uppercase font-mono font-bold opacity-80">
                   {isWaitingNextRound ? 'Wait Round' : 'Refund'}
                 </span>
               </button>
@@ -506,10 +506,10 @@ export default function AviatorBetPanel({
                 <button 
                   type="button"
                   onClick={handleCashOutClick}
-                  className="w-full h-[46px] sm:h-[58px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#ffbf00] to-[#ff9900] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_22px_rgba(255,153,0,0.4)] border-b-2 sm:border-b-3 border-[#c47c00] text-center flex flex-col justify-center items-center animate-pulse"
+                  className="w-full h-[44px] md:h-[50px] lg:h-[54px] rounded-xl bg-gradient-to-r from-[#ffbf00] to-[#ff9900] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_22px_rgba(255,153,0,0.4)] border-b-2 border-[#c47c00] text-center flex flex-col justify-center items-center animate-pulse"
                 >
-                  <span className="text-black text-xs sm:text-sm tracking-widest font-black uppercase leading-none select-none">CASH OUT</span>
-                  <span className="text-black font-mono font-bold text-xs sm:text-[13px] tracking-tight mt-0.5 select-none text-shadow-sm">
+                  <span className="text-black text-xs tracking-widest font-black uppercase leading-none select-none">CASH OUT</span>
+                  <span className="text-black font-mono font-bold text-xs tracking-tight mt-0.5 select-none text-shadow-sm">
                     {(placedBetAmount * crashMultiplier).toFixed(2)} KSh
                   </span>
                 </button>
@@ -518,11 +518,11 @@ export default function AviatorBetPanel({
                 <button 
                   type="button"
                   onClick={handlePlaceNextRoundBet}
-                  className="w-full h-[46px] sm:h-[58px] rounded-xl sm:rounded-2xl bg-[#2cb400] hover:bg-[#34d100] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_15px_rgba(44,180,0,0.3)] border-b-2 border-[#1f8700] text-center flex flex-col justify-center items-center select-none"
+                  className="w-full h-[44px] md:h-[50px] lg:h-[54px] rounded-xl bg-[#2cb400] hover:bg-[#34d100] active:scale-95 hover:scale-[1.01] transition-all cursor-pointer shadow-[0_4px_15px_rgba(44,180,0,0.3)] border-b-2 border-[#1f8700] text-center flex flex-col justify-center items-center select-none"
                 >
-                  <span className="text-white text-[9px] sm:text-[11px] tracking-widest font-black uppercase leading-none select-none">BET (NEXT)</span>
-                  <span className="text-[8px] sm:text-xs font-mono font-bold tracking-tight text-emerald-300 mt-0.5 sm:mt-1 uppercase">Cashed Out</span>
-                  <span className="text-white text-[9px] sm:text-[11px] font-mono font-bold tracking-tight select-none mt-0.5">
+                  <span className="text-white text-[9px] tracking-widest font-black uppercase leading-none select-none">BET (NEXT)</span>
+                  <span className="text-[8px] font-mono font-bold tracking-tight text-emerald-300 mt-0.5 uppercase">Cashed Out</span>
+                  <span className="text-white text-[9px] font-mono font-bold tracking-tight select-none mt-0.5">
                     {betAmount.toFixed(2)} KSh
                   </span>
                 </button>
