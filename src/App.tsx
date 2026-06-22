@@ -1623,112 +1623,115 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#07080a] text-gray-100 flex flex-col justify-center items-center p-0 md:p-4 relative antialiased overflow-hidden">
+    <div className="h-screen w-screen bg-[#0d0e10] text-gray-100 flex flex-col justify-start items-stretch p-0 relative antialiased overflow-hidden">
       
       {/* Central Screen Frame */}
-      <div className="w-full max-w-lg md:max-w-2xl bg-[#0d0e10] rounded-none md:rounded-3xl border border-[#23252a] overflow-y-auto flex flex-col h-full max-h-full md:h-[820px] md:max-h-[820px] shadow-[0_12px_60px_rgba(0,0,0,0.8)] shrink-0">
+      <div className="w-full h-full bg-[#0d0e10] overflow-y-auto flex flex-col shadow-none shrink-0">
         
-        {/* Dynamic Session Limit Alert Banner */}
-        {showSessionAlert && (
-          <div className="bg-amber-950/85 border-b border-amber-500/15 px-4 py-2 flex items-center justify-between text-[11px] select-none animate-slideDown shrink-0">
-            <div className="flex items-center gap-2 text-amber-300">
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>
-                <strong>Play Session limit reached!</strong> You have played for your self-imposed limit of {sessionLimit}m.
-              </span>
+        {/* STICKY TOP DASHBOARD WRAPPER: Matches Mobile & Laptop Full-Page layout */}
+        <div className="sticky top-0 z-40 bg-[#141518] flex flex-col shrink-0 border-b border-[#212327]/50 shadow-md">
+          {/* Dynamic Session Limit Alert Banner */}
+          {showSessionAlert && (
+            <div className="bg-amber-950/85 border-b border-amber-500/15 px-4 py-2 flex items-center justify-between text-[11px] select-none animate-slideDown shrink-0">
+              <div className="flex items-center gap-2 text-amber-300">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Play Session limit reached!</strong> You have played for your self-imposed limit of {sessionLimit}m.
+                </span>
+              </div>
+              <div className="flex gap-1.5 shrink-0 ml-1">
+                <button
+                  onClick={resetSessionTimer}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-extrabold px-2 py-0.5 rounded text-[9.5px] uppercase cursor-pointer transition-colors"
+                >
+                  Reset Timer
+                </button>
+                <button
+                  onClick={() => { setSessionLimit(null); resetSessionTimer(); }}
+                  className="bg-white/5 hover:bg-white/10 text-gray-300 font-bold px-2 py-0.5 rounded text-[9.5px] uppercase cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
-            <div className="flex gap-1.5 shrink-0 ml-1">
-              <button
-                onClick={resetSessionTimer}
-                className="bg-amber-600 hover:bg-amber-500 text-white font-extrabold px-2 py-0.5 rounded text-[9.5px] uppercase cursor-pointer transition-colors"
-              >
-                Reset Timer
-              </button>
-              <button
-                onClick={() => { setSessionLimit(null); resetSessionTimer(); }}
-                className="bg-white/5 hover:bg-white/10 text-gray-300 font-bold px-2 py-0.5 rounded text-[9.5px] uppercase cursor-pointer"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* TOP BAR BRAND INDENT */}
-        <AviatorHeader 
-          balance={balance}
-          onOpenDeposit={() => setIsDepositOpen(true)}
-          onOpenResponsibleGaming={() => setIsResponsibleGamingOpen(true)}
-          muted={muted}
-          onToggleMute={handleToggleMute}
-          currentView={currentView}
-          setView={setView}
-          notificationsCount={notifications.filter(n => !n.read).length}
-          onToggleNotifications={() => setIsNotificationsOpen(!isNotificationsOpen)}
-          authSessionMode={authSessionMode}
-          onToggleAuthSessionMode={handleToggleAuthSessionMode}
-          userProfile={userProfile}
-          onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenDownloadApp={() => setIsDownloadAppOpen(true)}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
-
-        {/* Alert Notifications Center pop-down drawer overlays */}
-        <div className="relative">
-          <NotificationsCenter 
-            notifications={notifications}
-            setNotifications={setNotifications}
-            isOpen={isNotificationsOpen}
-            setIsOpen={setIsNotificationsOpen}
+          {/* TOP BAR BRAND INDENT */}
+          <AviatorHeader 
+            balance={balance}
+            onOpenDeposit={() => setIsDepositOpen(true)}
+            onOpenResponsibleGaming={() => setIsResponsibleGamingOpen(true)}
+            muted={muted}
+            onToggleMute={handleToggleMute}
+            currentView={currentView}
+            setView={setView}
+            notificationsCount={notifications.filter(n => !n.read).length}
+            onToggleNotifications={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            authSessionMode={authSessionMode}
+            onToggleAuthSessionMode={handleToggleAuthSessionMode}
+            userProfile={userProfile}
+            onOpenProfile={() => setIsProfileOpen(true)}
+            onOpenDownloadApp={() => setIsDownloadAppOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
-        </div>
 
-        {/* VIEW NAVIGATION TABS */}
-        <div className="bg-[#101114] px-3 py-1.5 border-b border-[#212327] flex items-center justify-between gap-1 select-none shrink-0 overflow-x-auto text-[10px] font-bold font-sans tracking-wide">
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => { setView('aviator'); setIsNotificationsOpen(false); }}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${currentView === 'aviator' ? 'bg-[#e21515] text-[#fff] shadow-[0_0_12px_rgba(226,21,21,0.3)]' : 'bg-black/15 text-[#9b9da4] hover:text-[#d1d2d6]'}`}
-            >
-              <span>🚀</span>
-              <span className="uppercase">JETCASH</span>
-            </button>
-            <button
-              onClick={() => { setView('lobby'); setIsNotificationsOpen(false); }}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${currentView === 'lobby' ? 'bg-purple-600 text-[#fff] shadow-[0_0_12px_rgba(147,51,234,0.3)]' : 'bg-black/15 text-[#9b9da4] hover:text-[#d1d2d6]'}`}
-            >
-              <span>🎰</span>
-              <span className="uppercase">Casino Lobby</span>
-            </button>
+          {/* Alert Notifications Center pop-down drawer overlays */}
+          <div className="relative">
+            <NotificationsCenter 
+              notifications={notifications}
+              setNotifications={setNotifications}
+              isOpen={isNotificationsOpen}
+              setIsOpen={setIsNotificationsOpen}
+            />
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setIsDepositOpen(true)}
-              className="px-3 py-1.5 rounded bg-[#4ea300] hover:bg-[#5fc502] text-white font-black uppercase text-[10px] tracking-wider cursor-pointer flex items-center gap-1 shadow-[0_0_12px_rgba(78,163,0,0.3)] hover:scale-[1.02] active:scale-95 transition-all duration-100"
-              title="M-Pesa Express Deposit"
-            >
-              <span>💳</span>
-              <span>Deposit</span>
-            </button>
+          {/* VIEW NAVIGATION TABS */}
+          <div className="bg-[#101114] px-3 py-1.5 flex items-center justify-between gap-1 select-none shrink-0 overflow-x-auto text-[10px] font-bold font-sans tracking-wide">
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => { setView('aviator'); setIsNotificationsOpen(false); }}
+                className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${currentView === 'aviator' ? 'bg-[#e21515] text-[#fff] shadow-[0_0_12px_rgba(226,21,21,0.3)]' : 'bg-black/15 text-[#9b9da4] hover:text-[#d1d2d6]'}`}
+              >
+                <span>🚀</span>
+                <span className="uppercase">JETCASH</span>
+              </button>
+              <button
+                onClick={() => { setView('lobby'); setIsNotificationsOpen(false); }}
+                className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer ${currentView === 'lobby' ? 'bg-purple-600 text-[#fff] shadow-[0_0_12px_rgba(147,51,234,0.3)]' : 'bg-black/15 text-[#9b9da4] hover:text-[#d1d2d6]'}`}
+              >
+                <span>🎰</span>
+                <span className="uppercase">Casino Lobby</span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => setIsProfileOpen(true)}
-              className="px-2.5 py-1.5 rounded bg-purple-950/20 hover:bg-purple-900/30 text-purple-400 border border-purple-900/30 hover:border-purple-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
-              title="Open Account Profile Detail"
-            >
-              <span className="text-[11px]">👤</span>
-              <span>Profile</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setIsDepositOpen(true)}
+                className="px-3 py-1.5 rounded bg-[#4ea300] hover:bg-[#5fc502] text-white font-black uppercase text-[10px] tracking-wider cursor-pointer flex items-center gap-1 shadow-[0_0_12px_rgba(78,163,0,0.3)] hover:scale-[1.02] active:scale-95 transition-all duration-100"
+                title="M-Pesa Express Deposit"
+              >
+                <span>💳</span>
+                <span>Deposit</span>
+              </button>
 
-            <button
-              onClick={() => setIsChatOpen(true)}
-              className="px-2.5 py-1.5 rounded bg-amber-950/20 hover:bg-amber-900/30 text-amber-500 border border-amber-900/30 hover:border-amber-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
-              title="Open Global Lounge Chat"
-            >
-              <span className="text-[11px]">💬</span>
-              <span>Chat</span>
-            </button>
+              <button
+                onClick={() => setIsProfileOpen(true)}
+                className="px-2.5 py-1.5 rounded bg-purple-950/20 hover:bg-purple-900/30 text-purple-400 border border-purple-900/30 hover:border-purple-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
+                title="Open Account Profile Detail"
+              >
+                <span className="text-[11px]">👤</span>
+                <span>Profile</span>
+              </button>
+
+              <button
+                onClick={() => setIsChatOpen(true)}
+                className="px-2.5 py-1.5 rounded bg-amber-950/20 hover:bg-amber-900/30 text-amber-500 border border-amber-900/30 hover:border-amber-500/40 text-[10px] font-black uppercase tracking-wider cursor-pointer flex items-center gap-1 transition-all"
+                title="Open Global Lounge Chat"
+              >
+                <span className="text-[11px]">💬</span>
+                <span>Chat</span>
+              </button>
+            </div>
           </div>
         </div>
 
