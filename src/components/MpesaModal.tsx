@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { X, Smartphone, Coins, Landmark, CheckCircle2, ShieldAlert, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, Smartphone, Coins, Landmark, CheckCircle2, ShieldAlert, Copy, Check, ExternalLink, Settings } from 'lucide-react';
 import { COUNTRIES_LIST, Country } from '../utils/countries';
 
 interface MpesaModalProps {
@@ -37,16 +37,28 @@ export default function MpesaModal({
   const [step, setStep] = useState<'form' | 'stk_push' | 'paste_data' | 'timer' | 'claim_award' | 'success' | 'stk_real_push'>('form');
   const [copiedLink, setCopiedLink] = useState(false);
   
-  // Real Safaricom STK Push via Vercel endpoint variables
+  // Custom Gateway and API configuration variables
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [useRealSTK, setUseRealSTK] = useState<boolean>(() => {
     return localStorage.getItem('casinohub_use_real_stk') !== 'false';
   });
   const [vercelApiUrl, setVercelApiUrl] = useState<string>(() => {
-    return localStorage.getItem('casinohub_vercel_api_url') || 'https://aviatokenya254.vercel.app/api/sasapay-pay';
+    return localStorage.getItem('casinohub_vercel_api_url') || '/api/pay';
+  });
+  const [vercelWebUrl, setVercelWebUrl] = useState<string>(() => {
+    return localStorage.getItem('casinohub_vercel_web_url') || '/pay/index.html';
   });
   const [vercelHeaders, setVercelHeaders] = useState<string>(() => {
     return localStorage.getItem('casinohub_vercel_headers') || '{\n  "Content-Type": "application/json"\n}';
   });
+
+  const getCheckoutUrl = () => {
+    const base = vercelWebUrl.trim() || '/pay/index.html';
+    // If relative path, resolve with window.location.origin, otherwise use directly
+    const resolvedBase = base.startsWith('http') ? base : `${window.location.origin}${base.startsWith('/') ? '' : '/'}${base}`;
+    return `${resolvedBase}?amt=${amount}&tel=${phoneNumber}&order=TX-${Date.now().toString().slice(-6)}`;
+  };
+
   const [stkPushStep, setStkPushStep] = useState<'idle' | 'calling' | 'waiting' | 'failed' | 'success'>('idle');
   const [stkErrorMessage, setStkErrorMessage] = useState<string>('');
   const [formattedPhone, setFormattedPhone] = useState('');
@@ -261,16 +273,26 @@ export default function MpesaModal({
             </div>
             <h4 className="text-white text-sm font-black uppercase tracking-wider">M-PESA Cashier</h4>
           </div>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/5 transition-all cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className={`p-1.5 rounded-full transition-all cursor-pointer ${isSettingsOpen ? 'text-[#00e600] bg-[#00e600]/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              title="Gateway API Settings"
+            >
+              <Settings className="w-4 h-4 text-inherit" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/5 transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Selector Buttons */}
-        {step === 'form' && (
+        {step === 'form' && !isSettingsOpen && (
           <div className="flex border-b border-[#212327] bg-[#0d0e10]/40 p-1">
             <button
               onClick={() => setTab('deposit')}
@@ -288,8 +310,93 @@ export default function MpesaModal({
         )}
 
         {/* Dynamic Display based on transaction progress steps */}
-        <div className="p-5 flex-1">
-          {step === 'form' && (
+        <div className="p-5 flex-1 select-text">
+          {isSettingsOpen ? (
+            <div className="space-y-4 animate-scaleUp select-none">
+              <div className="flex justify-between items-center border-b border-[#212327] pb-2 text-left">
+                <span className="text-[11px] text-[#00e600] font-black uppercase tracking-wider">⚙️ Gateway API Setup</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVercelApiUrl('/api/pay');
+                    setVercelWebUrl('/pay/index.html');
+                    setUseRealSTK(true);
+                    setVercelHeaders('{\n  "Content-Type": "application/json"\n}');
+                    localStorage.setItem('casinohub_vercel_api_url', '/api/pay');
+                    localStorage.setItem('casinohub_vercel_web_url', '/pay/index.html');
+                    localStorage.setItem('casinohub_use_real_stk', 'true');
+                    localStorage.setItem('casinohub_vercel_headers', '{\n  "Content-Type": "application/json"\n}');
+                  }}
+                  className="text-[9px] text-[#fbbf24] hover:underline font-bold font-mono tracking-wide cursor-pointer"
+                >
+                  Reset Defaults
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-left">
+                {/* Vercel Web checkout domain */}
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Checkout Webpage (index.html)</label>
+                  <input
+                    type="text"
+                    value={vercelWebUrl}
+                    onChange={(e) => {
+                      setVercelWebUrl(e.target.value);
+                      localStorage.setItem('casinohub_vercel_web_url', e.target.value);
+                    }}
+                    placeholder="/pay/index.html"
+                    className="w-full bg-[#0d0e10] border border-[#2b2d35] rounded-lg px-3 py-2 text-xs text-white font-mono placeholder-zinc-600 focus:outline-none focus:border-emerald-500/55"
+                  />
+                  <p className="text-[8.5px] text-zinc-500 leading-tight">Your front-end Web cashier. Keep <code>/pay/index.html</code> to leverage your beautifully branded local checkout page, or use your custom Vercel checkout link.</p>
+                </div>
+
+                {/* Vercel API url (pay.js) */}
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">STK Push API (pay.js)</label>
+                  <input
+                    type="text"
+                    value={vercelApiUrl}
+                    onChange={(e) => {
+                      setVercelApiUrl(e.target.value);
+                      localStorage.setItem('casinohub_vercel_api_url', e.target.value);
+                    }}
+                    placeholder="/api/pay"
+                    className="w-full bg-[#0d0e10] border border-[#2b2d35] rounded-lg px-3 py-2 text-xs text-white font-mono placeholder-zinc-600 focus:outline-none focus:border-emerald-500/55"
+                  />
+                  <p className="text-[8.5px] text-zinc-500 leading-tight">Active API endpoint for STK pushes. Default is <code>/api/pay</code>.</p>
+                </div>
+
+                {/* Simulated sandbox toggle option */}
+                <div className="flex items-center justify-between p-2.5 bg-[#0d0e10] rounded-lg border border-[#212327]">
+                  <div className="flex flex-col text-left">
+                    <span className="text-[10px] text-zinc-200 font-bold uppercase tracking-wide">Network STK Trigger mode</span>
+                    <span className="text-[8px] text-zinc-500 font-mono">Simulates network delays in sandbox</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mode = !useRealSTK;
+                      setUseRealSTK(mode);
+                      localStorage.setItem('casinohub_use_real_stk', mode.toString());
+                    }}
+                    className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded border cursor-pointer ${useRealSTK ? 'bg-emerald-950/40 text-[#00e600] border-emerald-500/40' : 'bg-red-950/45 text-red-500 border-red-500/30'}`}
+                  >
+                    {useRealSTK ? 'Simulation' : 'Direct API'}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer font-bold"
+              >
+                Save & Close View
+              </button>
+            </div>
+          ) : (
+            <>
+              {step === 'form' && (
             <form onSubmit={handleAction} className="space-y-4">
               {authSessionMode === 'demo' && (
                 <div className="bg-purple-950/45 p-3.5 rounded-xl border border-purple-850/60 text-center space-y-2.5 animate-pulse">
@@ -469,27 +576,25 @@ export default function MpesaModal({
                 <div className="w-full bg-[#0d0e10] p-3.5 rounded-lg border border-[#212327] flex flex-col gap-2">
                   <div className="text-[9px] text-[#fbbf24] font-bold uppercase tracking-wider block font-mono">Secure Payment URL</div>
                   <div className="bg-[#141518] text-[9.5px] font-mono text-purple-300 p-2 rounded border border-[#24262c] text-left select-all truncate">
-                    https://aviatokenya254.vercel.app/api/sasapay-pay?amt={amount}&tel={phoneNumber}&ref=TX-{Date.now().toString().slice(-4)}
+                    {getCheckoutUrl()}
                   </div>
                   
                   <div className="flex gap-2 pt-1.5">
                     <button
                       type="button"
                       onClick={() => {
-                        const payUrl = `https://aviatokenya254.vercel.app/api/sasapay-pay?amt=${amount}&tel=${phoneNumber}`;
-                        window.open(payUrl, '_blank');
+                        window.open(getCheckoutUrl(), '_blank');
                       }}
-                      className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-[10px] uppercase tracking-wider rounded flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95"
+                      className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-[10px] uppercase tracking-wider rounded flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 animate-pulse"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Open Link</span>
+                      <span>Open Checkout Portal</span>
                     </button>
                     
                     <button
                       type="button"
                       onClick={() => {
-                        const payUrl = `https://aviatokenya254.vercel.app/api/sasapay-pay?amt=${amount}&tel=${phoneNumber}`;
-                        navigator.clipboard.writeText(payUrl);
+                        navigator.clipboard.writeText(getCheckoutUrl());
                         setCopiedLink(true);
                         setTimeout(() => setCopiedLink(false), 2000);
                       }}
@@ -884,6 +989,8 @@ export default function MpesaModal({
               </button>
             </div>
           )}
+          </>
+         )}
         </div>
         
       </div>
