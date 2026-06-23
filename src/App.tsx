@@ -1091,15 +1091,8 @@ export default function App() {
         });
       }
 
-      // Determine flight duration smoothly scaled
-      let flightDuration = 5000;
-      if (limit > 200) {
-        flightDuration = Math.round(15000 + ((limit - 200) / 800) * 10000);
-      } else if (limit > 15) {
-        flightDuration = Math.round(10000 + ((limit - 15) / 92) * 8000);
-      } else {
-        flightDuration = Math.round(4000 + ((limit - 1) / 14) * 6000);
-      }
+      // Determine flight duration smoothly scaled using the standard Aviator exponential scale growth duration
+      let flightDuration = limit <= 1.00 ? 0 : Math.round((Math.log(limit) / 0.0866) * 1000);
 
       const lobbyDuration = 6000; // 6 seconds lobby countdown
       const crashedDuration = 2200; // 2.2 seconds display on crashed (no hanging!)
@@ -1124,15 +1117,13 @@ export default function App() {
         }
       } else if (currentPhase === 'flight') {
         if (elapsed < flightDuration) {
-          // Compute current scale progression curves smoothly
-          const progressFrac = Math.min(1.0, elapsed / flightDuration);
-          // Exponential acceleration curve matching flight progress
-          let currentScale = 1.00 + (limit - 1.00) * Math.pow(progressFrac, 3.5);
+          const tSec = elapsed / 1000;
+          let currentScale = Math.exp(0.0866 * tSec);
           if (currentScale > limit) {
             currentScale = limit;
           }
           currentScale = parseFloat(currentScale.toFixed(2));
-          setCrashMultiplier(currentScale);
+          setCrashMultiplier(prev => Math.max(prev, currentScale));
 
           // Update active players' cashout status based on thresholds
           setActivePlayers(prev => {
@@ -1443,6 +1434,10 @@ export default function App() {
           if (msg.type === 'INITIAL_STATE') {
             setRoundIndex(msg.roundIndex);
             setCurrentPhase(msg.currentPhase);
+            if (msg.phaseStartTime && msg.serverTime) {
+              const serverElapsed = msg.serverTime - msg.phaseStartTime;
+              phaseStartTimeRef.current = Date.now() - serverElapsed;
+            }
             setCountdownValue(msg.currentPhase === 'lobby' ? parseFloat(((6000 - (Date.now() - msg.phaseStartTime)) / 1000).toFixed(1)) : null);
             setCrashActive(msg.currentPhase === 'flight');
             setCrashMultiplier(msg.currentPhase === 'flight' ? msg.currentMultiplier : 1.00);
@@ -1459,12 +1454,17 @@ export default function App() {
             setCrashMultiplier(1.00);
             setCrashStatusMessage("Waiting for Round...");
           } else if (msg.type === 'MULTIPLIER_TICK') {
-            setCrashMultiplier(msg.multiplier);
+            setCrashMultiplier(prev => Math.max(prev, msg.multiplier));
+            if (msg.multiplier && msg.multiplier >= 1.00) {
+              const expectedElapsed = (Math.log(msg.multiplier) / 0.0866) * 1000;
+              phaseStartTimeRef.current = Date.now() - expectedElapsed;
+            }
             setOnlinePlayersCount(msg.onlinePlayersCount);
             setActivePlayers(msg.activePlayers || []);
           } else if (msg.type === 'PHASE_CHANGE') {
             const nextPhase = msg.phase;
             setCurrentPhase(nextPhase);
+            phaseStartTimeRef.current = Date.now();
 
             if (nextPhase === 'lobby') {
               setRoundIndex(msg.roundIndex);
@@ -1879,10 +1879,10 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#0d0e10] text-gray-100 flex flex-col justify-start items-stretch p-0 relative antialiased overflow-hidden">
+    <div className="min-h-screen w-screen bg-[#0d0e10] text-gray-100 flex flex-col justify-start items-stretch p-0 relative antialiased overflow-y-auto">
       
       {/* Central Screen Frame */}
-      <div className={`w-full h-full bg-[#0d0e10] flex flex-col shadow-none shrink-0 ${currentView === 'aviator' ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'}`}>
+      <div className="w-full bg-[#0d0e10] flex flex-col shadow-none shrink-0 overflow-y-auto">
         
         {/* STICKY TOP DASHBOARD WRAPPER: Matches Mobile & Laptop Full-Page layout */}
         <div className="sticky top-0 z-40 bg-[#141518] flex flex-col shrink-0 border-b border-[#212327]/50 shadow-md">
@@ -1992,9 +1992,9 @@ export default function App() {
         </div>
 
         {currentView === 'aviator' && (
-          <div className="flex-1 flex flex-col md:flex-row min-h-0 md:overflow-hidden bg-[#0d0e10]">
+          <div className="flex-1 flex flex-col md:flex-row min-h-fit bg-[#0d0e10]">
             {/* LEFT SIDEBAR: Multiplayer lobby statistics & lounge chats */}
-            <div className="w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 border-r border-[#212327]/30 bg-[#0d0e10] flex flex-col overflow-y-auto md:overflow-hidden order-2 md:order-1 h-auto md:h-full md:p-3 pb-3 md:pb-3">
+            <div className="w-full md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 border-r border-[#212327]/30 bg-[#0d0e10] flex flex-col overflow-y-auto order-2 md:order-1 h-auto md:p-3 pb-3 md:pb-3">
               <BetsLedger 
                 myBets={myBets.filter(bet => (bet.mode || 'demo') === (authSessionMode === 'real' ? 'real' : 'demo'))}
                 activePlayers={activePlayers}
@@ -2012,7 +2012,7 @@ export default function App() {
             </div>
 
             {/* RIGHT MAIN STATION: Multiplier Ribbon, cockpit canvas and twin-bet consoles */}
-            <div className="flex-1 flex flex-col order-1 md:order-2 h-auto md:h-full md:overflow-hidden bg-[#0d0e10]">
+            <div className="flex-1 flex flex-col order-1 md:order-2 h-auto bg-[#0d0e10]">
               {/* RECENT HISTORIC MULTIPLIERS STRIP */}
               <HistoryRibbon 
                 multipliers={historyList}

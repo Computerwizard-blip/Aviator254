@@ -28,7 +28,33 @@ export default function AviatorGameViewport({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 260 });
-  
+  // Mirror props to mutable refs so the 60FPS high-performance animation loop runs steadily without teardown
+  const crashActiveRef = useRef(crashActive);
+  const crashMultiplierRef = useRef(crashMultiplier);
+  const crashStatusMessageRef = useRef(crashStatusMessage);
+
+  useEffect(() => {
+    crashActiveRef.current = crashActive;
+  }, [crashActive]);
+
+  useEffect(() => {
+    crashMultiplierRef.current = crashMultiplier;
+  }, [crashMultiplier]);
+
+  useEffect(() => {
+    crashStatusMessageRef.current = crashStatusMessage;
+  }, [crashStatusMessage]);
+
+  const lastFlightStateRef = useRef<{
+    planeX: number;
+    planeY: number;
+    controlX: number;
+    controlY: number;
+    angle: number;
+    multiplier: number;
+  } | null>(null);
+  const flewAwayTicksRef = useRef<number>(0);
+
   // Expose local state to track moving elements in the canvas animation loop
   const animationFrameRef = useRef<number | null>(null);
   const gridOffsetRef = useRef({ x: 0, y: 0 });
@@ -85,7 +111,11 @@ export default function AviatorGameViewport({
       ctx.lineWidth = 1;
       
       // Update grid offsets only if flight is occurring
-      if (crashActive) {
+      const active = crashActiveRef.current;
+      const multiplier = crashMultiplierRef.current;
+      const isFlewAway = crashStatusMessageRef.current && crashStatusMessageRef.current.includes("FLEW AWAY");
+
+      if (active) {
         gridOffsetRef.current.x = (gridOffsetRef.current.x - 1.8) % 40;
         gridOffsetRef.current.y = (gridOffsetRef.current.y + 1.2) % 40;
       }
@@ -106,53 +136,129 @@ export default function AviatorGameViewport({
         ctx.stroke();
       }
 
-      // 4. Calculate curve track if flight is active
-      if (crashActive) {
-        // Map exponential flight progress curve
-        const progressX = Math.min(0.85, 0.15 + (crashMultiplier * 0.01)); // X scales comfortably
-        const progressY = Math.min(0.80, 0.10 + Math.pow(crashMultiplier - 1.0, 0.6) * 0.08); // Y ascends curves
+      // 4. Calculate curve track
+      const startX = 40;
+      const startY = h - 40;
+      let drawPlane = false;
+      let angle = 0;
+
+      if (active) {
+        flewAwayTicksRef.current = 0; // reset
+        const t = 1.0 - 1.0 / Math.pow(multiplier, 0.45);
+
+        // Base coordinate factors starting exactly at (startX, startY)
+        const progressX = (startX / w) + t * (0.82 - (startX / w));
+        const progressY = (40 / h) + t * (0.78 - (40 / h));
 
         planeX = w * progressX;
         planeY = h - (h * progressY);
 
-        // Limit plane boundaries
-        planeX = Math.max(30, Math.min(w - 60, planeX));
-        planeY = Math.max(40, Math.min(h - 40, planeY));
+        // Limit plane boundaries with a clean safety margin to prevent leaving viewport bounds
+        planeX = Math.max(startX + 10, Math.min(w - 60, planeX));
+        planeY = Math.max(40, Math.min(startY, planeY));
 
-        // Create beautiful curve path
-        ctx.shadowBlur = 0;
+        const controlX = startX + (planeX - startX) * 0.65;
+        const controlY = startY;
+
+        // Save last state for flew-away freeze frame
+        lastFlightStateRef.current = {
+          planeX,
+          planeY,
+          controlX,
+          controlY,
+          angle: Math.atan2(planeY - startY, planeX - controlX),
+          multiplier
+        };
 
         // Draw the Red Sheet underneath the curve block first
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(10, h - 10);
-        ctx.quadraticCurveTo(planeX * 0.5, h * 0.98, planeX - 10, planeY + 5);
-        ctx.lineTo(planeX, planeY);
+        ctx.moveTo(startX, h - 10);
+        ctx.lineTo(startX, startY);
+        ctx.quadraticCurveTo(controlX, controlY, planeX, planeY);
         ctx.lineTo(planeX, h - 10);
         ctx.closePath();
 
         // Create elegant red-theme gradient for the sheet
         const sheetGrad = ctx.createLinearGradient(0, planeY, 0, h - 10);
-        sheetGrad.addColorStop(0, 'rgba(163, 11, 28, 0.45)'); // Deep crimson red at the top
-        sheetGrad.addColorStop(1, 'rgba(163, 11, 28, 0.05)'); // Smoothly fades to near transparency at bottom
+        sheetGrad.addColorStop(0, 'rgba(163, 11, 28, 0.45)'); 
+        sheetGrad.addColorStop(1, 'rgba(163, 11, 28, 0.05)'); 
         ctx.fillStyle = sheetGrad;
         ctx.fill();
         ctx.restore();
 
         // Draw the main glowing red curve trend line
         ctx.beginPath();
-        ctx.moveTo(10, h - 10);
-        ctx.quadraticCurveTo(planeX * 0.5, h * 0.98, planeX - 10, planeY + 5);
-        ctx.lineTo(planeX, planeY);
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(controlX, controlY, planeX, planeY);
         ctx.strokeStyle = '#e21515'; // Hot solid red line
         ctx.lineWidth = 4.5;
         
-        // Add neon red shadow glow to line path
         ctx.shadowColor = 'rgba(226, 21, 21, 0.9)';
         ctx.shadowBlur = 10;
         ctx.stroke();
         ctx.shadowBlur = 0; // reset shadow
 
+        angle = Math.atan2(planeY - startY, planeX - controlX);
+        drawPlane = true;
+
+      } else if (isFlewAway && lastFlightStateRef.current) {
+        // Increment flew away animation ticks
+        flewAwayTicksRef.current += 1;
+        const tAway = flewAwayTicksRef.current;
+
+        const state = lastFlightStateRef.current;
+        const controlX = state.controlX;
+        const controlY = state.controlY;
+        const planeXFrozen = state.planeX;
+        const planeYFrozen = state.planeY;
+
+        // Draw the frozen Red Sheet
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(startX, h - 10);
+        ctx.lineTo(startX, startY);
+        ctx.quadraticCurveTo(controlX, controlY, planeXFrozen, planeYFrozen);
+        ctx.lineTo(planeXFrozen, h - 10);
+        ctx.closePath();
+
+        const sheetGrad = ctx.createLinearGradient(0, planeYFrozen, 0, h - 10);
+        sheetGrad.addColorStop(0, 'rgba(163, 11, 28, 0.45)');
+        sheetGrad.addColorStop(1, 'rgba(163, 11, 28, 0.05)');
+        ctx.fillStyle = sheetGrad;
+        ctx.fill();
+        ctx.restore();
+
+        // Draw the frozen main glowing red curve trend line
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(controlX, controlY, planeXFrozen, planeYFrozen);
+        ctx.strokeStyle = '#e21515';
+        ctx.lineWidth = 4.5;
+        ctx.shadowColor = 'rgba(226, 21, 21, 0.9)';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Calculate accelerated off-screen escape coordinate
+        const speedX = 4 + tAway * 0.45;
+        const speedY = -2 - tAway * 0.35;
+        
+        planeX = planeXFrozen + speedX * tAway;
+        planeY = planeYFrozen + speedY * tAway;
+
+        // Tilt steeper upwards as it escapes
+        angle = state.angle - Math.min(0.35, tAway * 0.012);
+        drawPlane = true;
+
+      } else {
+        // Reset state & empty particles between rounds
+        lastFlightStateRef.current = null;
+        flewAwayTicksRef.current = 0;
+        particlesRef.current = [];
+      }
+
+      if (drawPlane) {
         // 5. Spawn and render red exhaust vapor sparks trailing behind propeller
         if (Math.random() > 0.40) {
           particlesRef.current.push({
@@ -184,8 +290,7 @@ export default function AviatorGameViewport({
         // 6. Draw glowing solid red airplane icon or modern silhouette
         ctx.save();
         ctx.translate(planeX, planeY);
-        // Slightly rotate upward corresponding to ascend angle
-        ctx.rotate(-Math.PI / 18 + Math.sin(Date.now() / 80) * 0.05);
+        ctx.rotate(angle);
 
         // Core airplane drawing (beautiful red icon geometry representation matching the reference precisely)
         ctx.shadowColor = 'rgba(255, 30, 30, 0.9)';
@@ -351,16 +456,15 @@ export default function AviatorGameViewport({
         particlesRef.current = [];
       }
 
-      localFrame = requestAnimationFrame(render);
+      animationFrameRef.current = requestAnimationFrame(render);
     };
 
-    localFrame = requestAnimationFrame(render);
-    animationFrameRef.current = localFrame;
+    animationFrameRef.current = requestAnimationFrame(render);
 
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [dimensions, crashActive, crashMultiplier]);
+  }, [dimensions]);
 
   return (
     <div 

@@ -128,13 +128,8 @@ async function startServer() {
   }
 
   function getFlightDuration(clLimit: number): number {
-    if (clLimit > 200) {
-      return Math.round(15000 + ((clLimit - 200) / 800) * 10000);
-    } else if (clLimit > 15) {
-      return Math.round(10000 + ((clLimit - 15) / 92) * 8000);
-    } else {
-      return Math.round(4000 + ((clLimit - 1) / 14) * 6000);
-    }
+    if (clLimit <= 1.00) return 0;
+    return Math.round((Math.log(clLimit) / 0.0866) * 1000);
   }
 
   function resetActivePlayersForRound() {
@@ -286,8 +281,8 @@ async function startServer() {
       }
     } else if (currentPhase === 'flight') {
       if (elapsed < flightDuration) {
-        const progressFrac = Math.min(1.0, elapsed / flightDuration);
-        let nextScale = 1.00 + (limit - 1.00) * Math.pow(progressFrac, 3.5);
+        const tSec = elapsed / 1000;
+        let nextScale = Math.exp(0.0866 * tSec);
         if (nextScale > limit) {
           nextScale = limit;
         }

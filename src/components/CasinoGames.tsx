@@ -2233,7 +2233,7 @@ export default function CasinoGames({
         <div className="flex flex-col gap-5">
 
           {/* 1. BRAND CAROUSEL SLIDESHOW ACCENT */}
-          <div className="relative rounded-2xl overflow-hidden min-h-[160px] md:min-h-[200px] bg-gradient-to-br from-[#101115] via-[#1b1c23] to-[#0c0d11] border border-neutral-800 shadow-xl select-none">
+          <div className="relative rounded-2xl overflow-hidden min-h-[140px] xs:min-h-[170px] sm:min-h-[210px] md:min-h-[235px] bg-gradient-to-br from-[#101115] via-[#1b1c23] to-[#0c0d11] border border-neutral-800 shadow-xl select-none">
             {/* Slides Mapping */}
             {(() => {
               const slides = [
@@ -2280,24 +2280,24 @@ export default function CasinoGames({
               ];
               const slide = slides[currentSlide];
               return (
-                <div className={`p-6 md:p-8 flex items-center justify-between gap-6 h-full w-full bg-gradient-to-r ${slide.color} transition-all duration-700 ease-in-out relative min-h-[160px] md:min-h-[200px]`}>
+                <div className={`p-4 xs:p-6 md:p-8 flex items-center justify-between gap-6 h-full w-full bg-gradient-to-r ${slide.color} transition-all duration-700 ease-in-out relative min-h-[140px] xs:min-h-[170px] sm:min-h-[210px] md:min-h-[235px]`}>
                   {/* Decorative faint background graphics */}
                   <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
                   <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
 
-                  <div className="space-y-2 text-left max-w-xl z-10 select-text font-sans">
-                    <span className="px-2.5 py-0.5 rounded-md bg-black/40 text-yellow-400 border border-yellow-400/30 text-[9px] font-black tracking-widest uppercase inline-block">
+                  <div className="space-y-1.5 text-left max-w-xl z-10 select-text font-sans">
+                    <span className="px-2 py-0.5 rounded bg-black/40 text-yellow-400 border border-yellow-400/30 text-[8px] xs:text-[9px] font-black tracking-widest uppercase inline-block">
                       {slide.badge}
                     </span>
-                    <h3 className="text-base sm:text-lg md:text-xl font-black text-white leading-tight uppercase tracking-tight">
+                    <h3 className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl font-black text-white leading-tight uppercase tracking-tight">
                       {slide.title} <strong className="text-yellow-400 font-black block sm:inline">{slide.subtitle}</strong>
                     </h3>
-                    <p className="text-[10px] sm:text-xs text-neutral-100 max-w-lg leading-relaxed font-sans opacity-95">
+                    <p className="text-[9.5px] xs:text-[11px] sm:text-xs text-neutral-100 max-w-lg leading-relaxed font-sans opacity-95 line-clamp-2 md:line-clamp-none">
                       {slide.desc}
                     </p>
                   </div>
 
-                  <div className="hidden sm:flex items-center justify-center w-24 h-24 rounded-2xl bg-black/25 text-5xl shrink-0 border border-white/10 select-none animate-bounce z-10 shadow-lg">
+                  <div className="hidden sm:flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-black/25 text-4xl md:text-5xl shrink-0 border border-white/10 select-none animate-bounce z-10 shadow-lg">
                     {slide.icon}
                   </div>
                 </div>
@@ -2310,7 +2310,7 @@ export default function CasinoGames({
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`w-2 h-2 rounded-full transition-all cursor-pointer ${currentSlide === idx ? 'bg-yellow-400 w-4 shadow-md' : 'bg-neutral-600'}`}
+                  className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${currentSlide === idx ? 'bg-yellow-400 w-3.5 shadow-md' : 'bg-neutral-600'}`}
                 />
               ))}
             </div>
@@ -2356,20 +2356,20 @@ export default function CasinoGames({
             </div>
             
             {/* Real Ticking Digit Panels */}
-            <div className="flex items-center gap-1 font-mono text-xl md:text-2xl font-black z-10 animate-fadeIn">
-              <span className="text-yellow-400 font-sans tracking-wide text-base uppercase mr-1">KSh</span>
+            <div className="flex flex-wrap items-center justify-start md:justify-end gap-0.5 sm:gap-1 font-mono text-sm xs:text-base sm:text-lg md:text-xl xl:text-2xl font-black z-10 animate-fadeIn min-w-0 max-w-full">
+              <span className="text-yellow-400 font-sans tracking-wide text-xs sm:text-sm uppercase mr-1">KSh</span>
               {Math.floor(ke7Jackpot).toLocaleString().split('').map((char, idx) => {
                 if (char === ',') {
                   return <span key={idx} className="text-yellow-500 mx-0.5 font-bold">,</span>;
                 }
                 return (
-                  <span key={idx} className="bg-[#0b0c10] text-[#ffbf00] border-y border-yellow-500/35 rounded-md px-2 py-1 shadow-inner shadow-black font-black text-center min-w-[22px]">
+                  <span key={idx} className="bg-[#0b0c10] text-[#ffbf00] border-y border-yellow-500/35 rounded px-1 py-0.5 sm:px-2 sm:py-1 shadow-inner shadow-black font-black text-center min-w-[15px] xs:min-w-[18px] sm:min-w-[22px]">
                     {char}
                   </span>
                 );
               })}
               <span className="text-yellow-500 font-bold">.</span>
-              <span className="bg-[#0b0c10] text-[#ffbf00] border-y border-yellow-500/35 rounded-md px-1.5 py-1 text-base font-black">
+              <span className="bg-[#0b0c10] text-[#ffbf00] border-y border-yellow-500/35 rounded px-1 py-0.5 sm:px-1.5 sm:py-1 text-xs sm:text-base font-black">
                 {ke7Jackpot.toFixed(2).split('.')[1]}
               </span>
             </div>
@@ -2596,36 +2596,38 @@ export default function CasinoGames({
             </div>
           </div>
 
-          <div className="flex items-center justify-between flex-wrap gap-4 border-b border-purple-900/30 pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-black tracking-tight text-white uppercase italic">Casino Lobby Grounds</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-900/30 pb-2.5">
+            <div className="flex items-center gap-2 select-text">
+              <span className="text-base sm:text-lg font-black tracking-tight text-white uppercase italic">Casino Lobby Grounds</span>
               <span className="px-2 py-0.5 rounded bg-[#22c55e]/15 border border-green-500/30 text-[8px] text-[#22c55e] font-black uppercase tracking-widest">
                 AUTOMATED STABLE
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 self-center flex-wrap">
-              {[
-                { id: 'all', title: 'All Stake Games', emoji: '🎰' },
-                { id: 'slots', title: 'Slots Arena', emoji: '🍒' },
-                { id: 'live', title: 'Livestream Croupiers', emoji: '📹' },
-                { id: 'table', title: 'Elite Tables', emoji: '🃏' },
-                { id: 'instant', title: 'Instant / Crash', emoji: '🚀' },
-              ].map((cat) => (
-                <button 
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all ${activeCategory === cat.id ? 'bg-[#1d0e37] border-purple-500 text-purple-200 shadow-[0_0_12px_rgba(147,51,234,0.3)]' : 'bg-[#0f081c] border-transparent text-purple-300/70 hover:text-white hover:bg-white/5'}`}
-                >
-                  <span className="text-xs shrink-0">{cat.emoji}</span>
-                  <span className="text-[11px] font-sans">{cat.title}</span>
-                </button>
-              ))}
+            <div className="w-full sm:w-auto -mx-2 px-2 overflow-x-auto no-scrollbar scroll-smooth">
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                {[
+                  { id: 'all', title: 'All Stake Games', emoji: '🎰' },
+                  { id: 'slots', title: 'Slots Arena', emoji: '🍒' },
+                  { id: 'live', title: 'Livestream Croupiers', emoji: '📹' },
+                  { id: 'table', title: 'Elite Tables', emoji: '🃏' },
+                  { id: 'instant', title: 'Instant / Crash', emoji: '🚀' },
+                ].map((cat) => (
+                  <button 
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-[#1d0e37] border-purple-500 text-purple-200 shadow-[0_0_12px_rgba(147,51,234,0.3)]' : 'bg-[#0f081c] border-transparent text-purple-300/70 hover:text-white hover:bg-white/5'}`}
+                  >
+                    <span className="text-xs shrink-0">{cat.emoji}</span>
+                    <span className="text-[11px] font-sans">{cat.title}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Grid high density cards viewport */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 xs:gap-3.5">
             {filteredGames.map((game) => {
               const isGameOfTheWeek = game.id === gameOfTheWeek?.gameId;
               const hotHighlight = ['slot-video', 'instant-aviator', 'instant-crush', 'instant-wheel', 'instant-mines'].includes(game.id) || isGameOfTheWeek;
@@ -2633,7 +2635,7 @@ export default function CasinoGames({
                 <div 
                   key={game.id}
                   onClick={() => handleGameSelect(game)}
-                  className={`cursor-pointer group relative rounded-xl overflow-hidden bg-[#0c0519]/90 border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 flex flex-col h-56 ${isGameOfTheWeek ? 'border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-gradient-to-br from-[#24133d] to-[#0c0415]' : hotHighlight ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.06)] bg-gradient-to-br from-[#180d28] to-[#0a0414]' : 'border-purple-900/30 hover:border-purple-500/30'}`}
+                  className={`cursor-pointer group relative rounded-xl overflow-hidden bg-[#0c0519]/90 border transition-all duration-300 hover:scale-[1.03] hover:-translate-y-0.5 flex flex-col h-48 xs:h-52 sm:h-56 ${isGameOfTheWeek ? 'border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-gradient-to-br from-[#24133d] to-[#0c0415]' : hotHighlight ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.06)] bg-gradient-to-br from-[#180d28] to-[#0a0414]' : 'border-purple-900/30 hover:border-purple-500/30'}`}
                 >
                   
                   {isGameOfTheWeek ? (
